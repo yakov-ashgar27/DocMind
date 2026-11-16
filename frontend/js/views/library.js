@@ -84,7 +84,7 @@ export async function documentView(root, params) {
         d.expiry_date ? h("button", { class: "btn ghost sm", title: t("calendar_hint"), onclick: async () => {
           const { url } = await api("/reminders/calendar-link", { method: "POST", body: { document_ids: [d.id] } });
           triggerDownload(url, "docmind-reminder.ics");
-        } }, icon("clock", 16), t("add_to_calendar")) : null))));
+        } }, icon("clock", 16), t("add_to_calendar")) : null)));
 
   root.append(h("div", { class: "page-head" }, h("button", { class: "btn ghost sm", onclick: () => history.back() }, t("back"))), top);
 
