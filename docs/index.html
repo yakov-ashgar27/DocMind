@@ -1,0 +1,168 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>DocMind — עוזר מסמכים אישי חכם</title>
+<meta name="description" content="תגיד מה צריך. DocMind מוצא את המסמכים שיש לך, זוכר מה נדרש ועוזר להשיג מה שחסר. חינם, קוד פתוח, פרטי.">
+<meta property="og:title" content="DocMind — עוזר מסמכים אישי חכם">
+<meta property="og:description" content="מוצא מסמכים בעברית ובאנגלית, זוכר מה נדרש לכל תהליך, ומכין תיק מסמכים להורדה. חינם וקוד פתוח.">
+<meta property="og:image" content="https://raw.githubusercontent.com/yakov-ashgar27/DocMind/main/frontend/icons/icon-512.png">
+<meta name="theme-color" content="#14213d">
+<link rel="icon" href="https://raw.githubusercontent.com/yakov-ashgar27/DocMind/main/frontend/icons/icon-192.png">
+<style>
+:root{--bg:#f6f5f1;--surface:#fff;--ink:#14181f;--ink2:#3b414c;--muted:#6f7480;--line:#e4e2db;--brand:#14213d;--brand2:#22335c;--accent:#2bb38a;--ok:#145c43;--okbg:#e5f4ed;--warn:#7a5000;--warnbg:#fbf0d9;
+--font:-apple-system,BlinkMacSystemFont,"Segoe UI","Rubik","Heebo","Noto Sans Hebrew",Roboto,Arial,sans-serif}
+*{box-sizing:border-box}html{-webkit-text-size-adjust:100%;scroll-behavior:smooth}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.65 var(--font);-webkit-font-smoothing:antialiased}
+a{color:var(--brand2)}
+.wrap{max-width:1040px;margin:0 auto;padding:0 20px}
+header.top{position:sticky;top:0;z-index:5;background:rgba(246,245,241,.9);backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}
+header.top .wrap{display:flex;align-items:center;justify-content:space-between;height:60px;gap:12px}
+.brand{display:flex;align-items:center;gap:10px;font-weight:750;font-size:18px;text-decoration:none;color:var(--ink)}
+.brand img{width:32px;height:32px;border-radius:9px}
+.lang{display:inline-flex;background:#ecebe5;border-radius:10px;padding:3px}
+.lang button{border:0;background:transparent;padding:6px 12px;border-radius:8px;font:inherit;font-size:14px;font-weight:600;color:var(--muted);cursor:pointer}
+.lang button[aria-pressed=true]{background:#fff;color:var(--ink)}
+.hero{padding:56px 0 36px;text-align:center}
+.hero h1{font-size:clamp(30px,6vw,52px);line-height:1.15;margin:0 0 14px;letter-spacing:-.02em}
+.hero p.lead{font-size:clamp(17px,2.4vw,20px);color:var(--ink2);max-width:640px;margin:0 auto 26px}
+.cta{display:flex;gap:10px;justify-content:center;flex-wrap:wrap}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:50px;padding:0 22px;border-radius:14px;font-weight:650;text-decoration:none;border:1px solid transparent;font-size:16px}
+.btn.primary{background:var(--brand);color:#fff}.btn.primary:hover{background:var(--brand2)}
+.btn.ghost{background:#fff;border-color:var(--line);color:var(--ink)}.btn.ghost:hover{border-color:#cfccc2}
+.badges{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-top:18px}
+.badge{font-size:13px;font-weight:600;padding:4px 10px;border-radius:99px;background:var(--okbg);color:var(--ok)}
+.shots{display:flex;gap:14px;overflow-x:auto;padding:8px 4px 18px;scroll-snap-type:x mandatory;margin-top:26px}
+.shots img{height:440px;border-radius:22px;border:1px solid var(--line);box-shadow:0 8px 30px rgba(20,33,61,.10);scroll-snap-align:center;background:#fff;flex:none}
+section{padding:40px 0}
+h2{font-size:clamp(24px,4vw,32px);margin:0 0 8px;letter-spacing:-.01em}
+.sub{color:var(--muted);margin:0 0 24px}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:14px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:18px;padding:20px}
+.card h3{margin:0 0 6px;font-size:17px}.card p{margin:0;color:var(--ink2);font-size:15px}
+.ic{display:grid;place-items:center;width:40px;height:40px;border-radius:12px;background:#eef0f6;color:var(--brand);margin-bottom:10px;font-size:20px}
+.get .card{display:flex;flex-direction:column;gap:10px}
+.get .card.rec{border:2px solid var(--brand)}
+.tag{align-self:flex-start;font-size:12px;font-weight:700;padding:3px 10px;border-radius:99px;background:var(--brand);color:#fff}
+.tag.soft{background:#eef0f6;color:var(--brand)}
+ol.steps{margin:0;padding-inline-start:20px;color:var(--ink2);font-size:15px}ol.steps li{margin:4px 0}
+code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:.92em;background:#f0efea;padding:2px 6px;border-radius:6px;direction:ltr;unicode-bidi:isolate}
+.note{background:var(--warnbg);color:var(--warn);border-radius:14px;padding:14px 16px;font-size:15px}
+.privacy{background:var(--brand);color:#e9ecf5;border-radius:24px;padding:32px 24px}
+.privacy h2{color:#fff}.privacy .card{background:rgba(255,255,255,.06);border-color:rgba(255,255,255,.12)}
+.privacy .card h3{color:#fff}.privacy .card p{color:#c9cfdf}.privacy .ic{background:rgba(43,179,138,.18);color:var(--accent)}
+.you{display:none;margin:0 auto 18px;max-width:640px;background:#fff;border:1px solid var(--line);border-radius:14px;padding:12px 16px;font-size:15px}
+.you.show{display:block}
+footer{padding:30px 0 50px;color:var(--muted);font-size:14px;text-align:center}
+[data-l]{display:none}html[lang=he] [data-l=he],html[lang=en] [data-l=en]{display:revert}
+@media (max-width:560px){.shots img{height:380px}.hero{padding-top:36px}}
+</style>
+</head>
+<body>
+<header class="top"><div class="wrap">
+  <a class="brand" href="#"><img src="https://raw.githubusercontent.com/yakov-ashgar27/DocMind/main/frontend/icons/icon-192.png" alt="">DocMind</a>
+  <div class="lang" role="group" aria-label="Language"><button data-set="he" aria-pressed="true">עברית</button><button data-set="en" aria-pressed="false">English</button></div>
+</div></header>
+
+<main class="wrap">
+<section class="hero">
+  <h1><span data-l="he">תגיד מה צריך.<br>הוא ימצא מה יש לך.</span><span data-l="en">Tell it what you need.<br>It finds what you have.</span></h1>
+  <p class="lead"><span data-l="he">עוזר מסמכים אישי בעברית ובאנגלית: מזהה תעודת זהות, צו מילואים, אישור לימודים ועוד, גם כששם הקובץ הוא <code>IMG_2026…</code>. זוכר מה נדרש לכל תהליך, ומכין תיק מסמכים להורדה.</span><span data-l="en">A Hebrew/English personal document assistant: recognises ID cards, reserve orders, enrollment proofs and more, even when the file is called <code>IMG_2026…</code>. It remembers what each process needs and prepares a bundle to download.</span></p>
+  <div id="you" class="you"></div>
+  <div class="cta">
+    <a class="btn primary" href="#get"><span data-l="he">להתקנה בטלפון ובמחשב</span><span data-l="en">Install on phone and computer</span></a>
+    <a class="btn ghost" href="https://github.com/yakov-ashgar27/DocMind"><span data-l="he">הקוד ב-GitHub</span><span data-l="en">Code on GitHub</span></a>
+  </div>
+  <div class="badges"><span class="badge" data-l="he">חינם</span><span class="badge" data-l="en">Free</span><span class="badge" data-l="he">קוד פתוח</span><span class="badge" data-l="en">Open source</span><span class="badge" data-l="he">Android ו-iPhone</span><span class="badge" data-l="en">Android and iPhone</span><span class="badge" data-l="he">המסמכים נשארים אצלך</span><span class="badge" data-l="en">Your documents stay yours</span></div>
+  <div class="shots" aria-label="screenshots">
+    <img src="screenshots/04_home.png" alt="Home" loading="lazy">
+    <img src="screenshots/06_assistant_results.png" alt="Assistant results" loading="lazy">
+    <img src="screenshots/09_bundle.png" alt="Bundle" loading="lazy">
+    <img src="screenshots/21_library_locked.png" alt="Vault" loading="lazy">
+    <img src="screenshots/11_memory.png" alt="Memory" loading="lazy">
+  </div>
+</section>
+
+<section>
+  <h2 data-l="he">מה הוא עושה</h2><h2 data-l="en">What it does</h2>
+  <p class="sub" data-l="he">לא עוד תיקייה בענן. עוזר שמבין מה צריך ומכין את זה בשבילך.</p><p class="sub" data-l="en">Not another cloud folder: an assistant that understands what you need and prepares it.</p>
+  <div class="grid">
+    <div class="card"><div class="ic">⌕</div><h3 data-l="he">מוצא לפי תוכן</h3><h3 data-l="en">Finds by content</h3><p data-l="he">זיהוי טקסט מקומי בעברית ובאנגלית וסיווג ל-30 סוגי מסמכים, גם לסריקות ולצילומי טלפון.</p><p data-l="en">Local Hebrew/English OCR and classification into 30 document types, including scans and phone photos.</p></div>
+    <div class="card"><div class="ic">✦</div><h3 data-l="he">זוכר מה נדרש</h3><h3 data-l="en">Remembers what's needed</h3><p data-l="he">"מלגת מילואים", "משכנתא", "דמי אבטלה". בפעם הבאה הוא מתחיל מהרשימה ושואל מה השתנה. שום דבר לא נשמר בלי אישורך.</p><p data-l="en">"Reserve scholarship", "mortgage", "unemployment": next time it starts from your list and asks what changed. Nothing is saved without your approval.</p></div>
+    <div class="card"><div class="ic">↧</div><h3 data-l="he">תיק מסמכים להורדה</h3><h3 data-l="en">Download-ready bundles</h3><p data-l="he">כל קובץ בנפרד עם שם מסודר, בלי ZIP. PDF מאוחד רק אם רוצים.</p><p data-l="en">Each file separately with tidy names, no ZIP. A combined PDF only if you want one.</p></div>
+    <div class="card"><div class="ic">⚑</div><h3 data-l="he">אומר מאיפה להשיג</h3><h3 data-l="en">Says where to get it</h3><p data-l="he">רק אחרי שחיפש בכל המקורות, הוא מציע מקור רשמי להשגת המסמך החסר.</p><p data-l="en">Only after searching every source does it suggest the official place to obtain what's missing.</p></div>
+    <div class="card"><div class="ic">⏰</div><h3 data-l="he">תזכורות תוקף</h3><h3 data-l="en">Expiry reminders</h3><p data-l="he">דרכון, רישיון וכדומה. הוספה ליומן של Google או של iPhone בלחיצה.</p><p data-l="en">Passport, licence and more, added to Google or iPhone Calendar in one tap.</p></div>
+    <div class="card"><div class="ic">✉</div><h3 data-l="he">Gmail, Drive ווואטסאפ</h3><h3 data-l="en">Gmail, Drive and WhatsApp</h3><p data-l="he">חיפוש בקבצים מצורפים (בחיבור מאושר בלבד), וייבוא צ'אט מיוצא מוואטסאפ.</p><p data-l="en">Searches attachments (only with your approval) and imports exported WhatsApp chats.</p></div>
+  </div>
+</section>
+
+<section class="get" id="get">
+  <h2 data-l="he">איך מקבלים את האפליקציה</h2><h2 data-l="en">Get the app</h2>
+  <p class="sub" data-l="he">כל אחד מריץ עותק פרטי משלו. המסמכים שלך לא עוברים לשום שרת משותף ולא למפתח.</p><p class="sub" data-l="en">Everyone runs their own private copy. Your documents never go to a shared server or to the developer.</p>
+  <div class="grid">
+    <div class="card rec">
+      <span class="tag" data-l="he">הכי מהיר: מהטלפון, בלי מחשב</span><span class="tag" data-l="en">Fastest: from your phone, no computer</span>
+      <h3 data-l="he">עותק פרטי בענן של GitHub</h3><h3 data-l="en">Private copy in GitHub's cloud</h3>
+      <ol class="steps" data-l="he"><li>להתחבר לחשבון GitHub (חינם).</li><li>ללחוץ על הכפתור ← <b>Create codespace</b> ולחכות 3 עד 5 דקות.</li><li>בלשונית <b>PORTS</b>, בשורה 8000, ללחוץ על הגלובוס.</li><li>Android: ⋮ ← "התקנת אפליקציה". iPhone: שיתוף ← "הוסף למסך הבית".</li></ol>
+      <ol class="steps" data-l="en"><li>Sign in to GitHub (free).</li><li>Tap the button → <b>Create codespace</b>, wait 3–5 minutes.</li><li>In <b>PORTS</b>, row 8000, tap the globe icon.</li><li>Android: ⋮ → "Install app". iPhone: Share → "Add to Home Screen".</li></ol>
+      <a class="btn primary" href="https://codespaces.new/yakov-ashgar27/DocMind"><span data-l="he">יצירת עותק פרטי</span><span data-l="en">Create my private copy</span></a>
+      <p class="note" data-l="he">חינם עד 60 שעות שימוש בחודש בחשבון GitHub חינמי. המכונה נרדמת אחרי 30 דקות ונמחקת אחרי 30 יום בלי שימוש. מתאים לנסות. למסמכים אישיים לאורך זמן עדיף להריץ על המחשב.</p>
+      <p class="note" data-l="en">Free up to 60 hours a month on a free GitHub account. It sleeps after 30 minutes idle and is deleted after 30 days unused. Great for trying it; for long-term personal documents prefer your own computer.</p>
+    </div>
+    <div class="card">
+      <span class="tag soft" data-l="he">מומלץ למסמכים אישיים</span><span class="tag soft" data-l="en">Recommended for personal documents</span>
+      <h3 data-l="he">על המחשב שלך, ובטלפון דרכו</h3><h3 data-l="en">On your computer, and on your phone through it</h3>
+      <ol class="steps" data-l="he"><li>להוריד ולפתוח את הקובץ.</li><li>להתקין Python ו-Tesseract (חינם).</li><li>Windows: לחיצה כפולה על <code>start.bat</code>. Mac: <code>./start.sh</code></li><li>לטלפון: Tailscale (חינם) ואז <code>tailscale serve --bg 8000</code>, ולהתקין מהכתובת שמתקבלת.</li></ol>
+      <ol class="steps" data-l="en"><li>Download and unzip.</li><li>Install Python and Tesseract (free).</li><li>Windows: double-click <code>start.bat</code>. Mac: <code>./start.sh</code></li><li>Phone: Tailscale (free), then <code>tailscale serve --bg 8000</code>, and install from that address.</li></ol>
+      <a class="btn ghost" href="https://github.com/yakov-ashgar27/DocMind/archive/refs/heads/main.zip"><span data-l="he">הורדה (ZIP)</span><span data-l="en">Download (ZIP)</span></a>
+      <a href="https://github.com/yakov-ashgar27/DocMind/blob/main/docs/SETUP_HE.md"><span data-l="he">מדריך מלא בעברית</span><span data-l="en">Full guide (Hebrew)</span></a>
+    </div>
+    <div class="card">
+      <span class="tag soft">Docker</span>
+      <h3 data-l="he">לשרת ביתי או למתקדמים</h3><h3 data-l="en">For a home server or advanced users</h3>
+      <p><code>cp .env.example .env</code><br><code>docker compose up --build</code></p>
+      <a href="https://github.com/yakov-ashgar27/DocMind#readme"><span data-l="he">הוראות ב-README</span><span data-l="en">Instructions in the README</span></a>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="privacy">
+    <h2 data-l="he">אבטחה ופרטיות, כי מדובר במסמכים אישיים</h2><h2 data-l="en">Security and privacy, because these are personal documents</h2>
+    <div class="grid" style="margin-top:18px">
+      <div class="card"><div class="ic">🔒</div><h3 data-l="he">כספת עם קוד</h3><h3 data-l="en">PIN vault</h3><p data-l="he">תיקיות מוגנות (זיהוי, כספים, רפואי ועוד) מוסתרות לגמרי עד שמזינים קוד. נעילה אוטומטית אחרי 5 דקות.</p><p data-l="en">Protected folders (ID, finance, medical and more) stay fully hidden until you enter a PIN. Auto-locks after 5 minutes.</p></div>
+      <div class="card"><div class="ic">⚿</div><h3 data-l="he">הצפנה</h3><h3 data-l="en">Encryption</h3><p data-l="he">כל קובץ, הטקסט שחולץ והשיחות מוצפנים ב-AES-256. זיהוי הטקסט רץ מקומית.</p><p data-l="en">Every file, extracted text and conversation is AES-256 encrypted. OCR runs locally.</p></div>
+      <div class="card"><div class="ic">✓</div><h3 data-l="he">אימות דו-שלבי</h3><h3 data-l="en">Two-step verification</h3><p data-l="he">קוד מאפליקציית אימות, קודי גיבוי, ונעילת חשבון אחרי ניסיונות כושלים.</p><p data-l="en">Authenticator-app codes, recovery codes, and account lockout after failed attempts.</p></div>
+      <div class="card"><div class="ic">⊘</div><h3 data-l="he">בלי שיתוף</h3><h3 data-l="en">No sharing</h3><p data-l="he">שום מסמך לא נשלח לבינה מלאכותית חיצונית. אין שרת מרכזי. העותק שלך שייך רק לך.</p><p data-l="en">No document is sent to an external AI. There's no central server; your copy is yours alone.</p></div>
+    </div>
+  </div>
+</section>
+</main>
+
+<footer>
+  <p><a href="https://github.com/yakov-ashgar27/DocMind">github.com/yakov-ashgar27/DocMind</a> · <span data-l="he">קוד פתוח · חינם</span><span data-l="en">Open source · Free</span></p>
+</footer>
+
+<script>
+(function () {
+  var html = document.documentElement;
+  function setLang(l) {
+    html.lang = l; html.dir = l === "he" ? "rtl" : "ltr";
+    document.querySelectorAll(".lang button").forEach(function (b) { b.setAttribute("aria-pressed", b.dataset.set === l); });
+    try { localStorage.setItem("dm_site_lang", l); } catch (e) {}
+    hint();
+  }
+  function hint() {
+    var ua = navigator.userAgent, el = document.getElementById("you"), he = html.lang === "he", t = "";
+    if (/android/i.test(ua)) t = he ? "זיהינו Android. אחרי ההתקנה: ב-Chrome ← ⋮ ← \"התקנת אפליקציה\"." : "Android detected. After setup: Chrome → ⋮ → \"Install app\".";
+    else if (/iphone|ipad|ipod/i.test(ua)) t = he ? "זיהינו iPhone. אחרי ההתקנה: ב-Safari ← שיתוף ← \"הוסף למסך הבית\"." : "iPhone detected. After setup: Safari → Share → \"Add to Home Screen\".";
+    el.textContent = t; el.className = t ? "you show" : "you";
+  }
+  document.querySelectorAll(".lang button").forEach(function (b) { b.addEventListener("click", function () { setLang(b.dataset.set); }); });
+  var saved = null; try { saved = localStorage.getItem("dm_site_lang"); } catch (e) {}
+  setLang(saved || ((navigator.language || "he").toLowerCase().indexOf("he") === 0 ? "he" : "en"));
+})();
+</script>
+</body>
+</html>
