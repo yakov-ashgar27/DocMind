@@ -1,6 +1,7 @@
 // Phone edition: same interface as frontend/js/api.js, answered by the on-device engine (core/local.js).
 import { handle } from "./core/local.js";
 import * as V from "./core/vault.js";
+import * as native from "./native.js";
 
 export class ApiError extends Error {
   constructor(code, status, data) { super(code); this.code = code; this.status = status; this.data = data; }
@@ -42,6 +43,12 @@ export function dropThumb(docId) { thumbCache.delete(docId); }
 export function clearThumbs() { thumbCache.clear(); }
 
 export function triggerDownload(url, filename) {
+  if (native.isNative) {
+    // WebView can't download blob: links: hand the file to Android (saved to Downloads/DocMind).
+    fetch(url).then((r) => r.blob()).then((b) => native.saveBlob(b, filename || "docmind-file", b.type))
+      .then((res) => window.dispatchEvent(new CustomEvent("docmind-saved", { detail: { res, filename } })));
+    return;
+  }
   const a = document.createElement("a");
   a.href = url;
   if (filename) a.download = filename;
@@ -52,8 +59,9 @@ export function triggerDownload(url, filename) {
 }
 
 // Native share sheet (WhatsApp, Mail, Files...). Best way to send files from an iPhone.
-export const canShareFiles = (files) => !!(navigator.canShare && navigator.share && navigator.canShare({ files }));
+export const canShareFiles = (files) => native.isNative || !!(navigator.canShare && navigator.share && navigator.canShare({ files }));
 export async function shareFiles(files, title) {
+  if (native.isNative) return native.shareBlobs(files);
   try { await navigator.share({ files, title }); return true; } catch (e) { return e.name === "AbortError"; }
 }
 

@@ -20,9 +20,15 @@ function aliasRx(alias) {
   return new RegExp(`(?<![\\w])${a}(?![\\w])`, "g");
 }
 
-const ALIASES = Object.entries(C.REQUEST_ALIASES).flatMap(([dt, list]) => list.map((a) => [a, dt, aliasRx(a)]))
+// Hebrew construct phrases take the definite article on the LAST word ("אישור ניהול החשבון", "תעודת הזהות").
+function variants(alias) {
+  const w = alias.split(" ");
+  if (w.length > 1 && /[\u0590-\u05FF]/.test(w.at(-1)) && !w.at(-1).startsWith("ה")) return [alias, [...w.slice(0, -1), "ה" + w.at(-1)].join(" ")];
+  return [alias];
+}
+const ALIASES = Object.entries(C.REQUEST_ALIASES).flatMap(([dt, list]) => list.flatMap((a) => variants(a).map((v) => [v, dt, aliasRx(v)])))
   .sort((x, y) => y[0].length - x[0].length);
-const PROCS = Object.entries(C.PROCESSES).flatMap(([pk, p]) => p.triggers.map((t) => [t, pk, aliasRx(t)]))
+const PROCS = Object.entries(C.PROCESSES).flatMap(([pk, p]) => p.triggers.flatMap((t) => variants(t).map((v) => [v, pk, aliasRx(v)])))
   .sort((x, y) => y[0].length - x[0].length);
 
 const TASK = [

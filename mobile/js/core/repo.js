@@ -153,7 +153,7 @@ export async function reprotectAll() {
 const safeName = (n) => (n || "document").replace(/\\/g, "/").split("/").pop().replace(/[\x00-\x1f<>:"|?*]/g, "_").trim().slice(0, 180) || "document";
 export const MAX_BYTES = 25 * 1024 * 1024;
 
-export async function ingest(bytes, filename, source = "upload") {
+export async function ingest(bytes, filename, source = "upload", { pre = null, skipIfExists = false, origin = null } = {}) {
   need();
   if (!bytes.length) throw new LocalError("empty_file");
   if (bytes.length > MAX_BYTES) throw new LocalError("file_too_large", 413);
@@ -162,6 +162,7 @@ export async function ingest(bytes, filename, source = "upload") {
   if (!mime) throw new LocalError("unsupported_file_type", 415);
   const sha = await cr.sha256hex(bytes);
   const dup = [...(await docs()).values()].find((d) => d.sha256 === sha && !d.duplicate_of);
+  if (dup && skipIfExists) return null;
   const id = cr.uuid();
   const k = await cr.newDocKey();
   await db.put("blobs", id, await cr.seal(k, bytes, "file:" + id));
@@ -170,6 +171,7 @@ export async function ingest(bytes, filename, source = "upload") {
     mime_type: mime, size_bytes: bytes.length, sha256: sha, category_key: "other", doc_type: "unknown",
     doc_type_confidence: 0, doc_type_source: "auto", status: "processing", archived: false, tags: [],
     duplicate_of: dup ? dup.id : null, duplicate_kind: dup ? "exact" : null, text: "", created_at: now(), updated_at: now(),
+    ...(pre ? { _pre: pre } : {}), ...(origin ? { origin } : {}),
   };
   await writeDoc(doc, k);
   queue(id);
@@ -207,12 +209,13 @@ export async function processDoc(id) {
   const bytes = await readBytes(id);
   const k = await docKeyFor(await db.get("docs", id));
   try {
-    const r = await ex.extractText(bytes, doc.mime_type);
+    const r = doc._pre || await ex.extractText(bytes, doc.mime_type);
     const c = cl.classify(r.text, doc.original_filename, await personalHint(r.text));
     const lang = (await settings()).locale || "he";
     const next = { ...doc, text: r.text, text_chars: r.text.length, ocr_used: r.ocr, language: r.language,
       doc_type: c.doc_type, doc_type_confidence: c.confidence, category_key: c.category, issuer: c.issuer,
       doc_date: c.doc_date, expiry_date: c.expiry_date, status: "ready", error: null, updated_at: now() };
+    delete next._pre;
     if (c.doc_type !== "unknown" && doc.display_name === doc.original_filename.replace(/\.[^.]+$/, "")) next.display_name = cl.smartName(c, doc.original_filename, lang);
     if (!next.duplicate_of && c.doc_type !== "unknown" && r.text.length >= 40) {
       const words = (t) => new Set((t.toLowerCase().match(/[\p{L}\p{N}]{3,}/gu) || []));

@@ -139,6 +139,7 @@ async function enter() {
   if (!location.hash || location.hash === "#/") navigate("/home"); else renderRoute();
   armAutoLock();
   importSharedFiles();
+  importNativeShared();
 }
 
 // Files shared to DocMind from other apps (Android share sheet) wait in the inbox until unlock.
@@ -162,6 +163,29 @@ async function importSharedFiles() {
   }
   if (n) { toast(t("files_added", { n }), "ok"); navigate("/library"); }
 }
+
+// Android app: files shared to DocMind ("Share → DocMind") are imported after unlock.
+async function importNativeShared() {
+  const native = await import("./native.js");
+  if (!native.isNative || !V.session.dek) return;
+  const items = native.takeShared();
+  let n = 0;
+  for (const it of items) {
+    try {
+      const bytes = await native.readUri(it.uri);
+      if (/\.zip$/i.test(it.name) || it.mime === "application/zip") {
+        const fd = new FormData(); fd.append("file", new File([bytes], it.name)); await api("/import/whatsapp", { method: "POST", form: fd });
+      } else await repo.ingest(bytes, it.name, "upload");
+      n++;
+    } catch (e) { toast(`${it.name}: ${errText(e.code || e.message)}`, "bad"); }
+  }
+  if (n) { toast(t("files_added", { n }), "ok"); navigate("/library"); }
+}
+import("./native.js").then((native) => {
+  if (!native.isNative) return;
+  native.onNative("shared", () => importNativeShared());
+  window.addEventListener("docmind-saved", (e) => toast(e.detail.res === "saved" ? t("saved_to_downloads") : t("saved"), e.detail.res === "error" ? "bad" : "ok"));
+});
 
 // Auto-lock: after N minutes in the background (default 2) or of inactivity (default 10).
 let hiddenAt = 0, idleTimer = null;
@@ -189,5 +213,5 @@ mountVaultIndicator();
 app.replaceChildren(h("div", { class: "loading full" }, spinner()));
 V.isSetUp().then((ok) => (ok ? lockScreen() : setupScreen()));
 
-if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(() => {});
+if ("serviceWorker" in navigator && !window.DocMindNative) navigator.serviceWorker.register("sw.js").catch(() => {});
 export { lockScreen };

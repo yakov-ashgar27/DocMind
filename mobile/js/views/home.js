@@ -21,6 +21,14 @@ export async function homeView(root) {
       stat(t("bundles"), d.totals.bundles, "/bundles", "layers"),
       stat(t("checklists"), d.totals.checklists, "/memory", "brain")));
 
+  const native = await import("../native.js");
+  if (native.isNative) {
+    const scanner = await import("../core/scanner.js");
+    if (!(await scanner.lastScan()) || scanner.state.running) {
+      root.append(h("button", { class: "card notice scan-cta", onclick: () => navigate("/accounts") }, icon("search", 20), h("span", {}, t("home_scan_cta")), icon("chevron", 16)));
+    }
+  }
+
   if (d.proposals.length) {
     root.append(h("section", { class: "card notice", onclick: () => navigate("/memory") },
       icon("brain", 18), h("span", {}, `${t("pending")}: ${d.proposals.length}`), icon("chevron", 16)));

@@ -352,3 +352,7 @@ input.compact { width: auto; max-width: 180px; min-height: 36px; }
 .pick-go { margin-top: 2px; }
 .linkish.sm { font-size: 13.5px; }
 [hidden] { display: none !important; }
+
+.scan-card { display: flex; flex-direction: column; gap: 10px; }
+.scan-card h2 { margin: 0; display: flex; align-items: center; gap: 4px; }
+.scan-cta { background: var(--brand); color: #fff; border-color: var(--brand); }

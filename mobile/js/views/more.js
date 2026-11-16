@@ -4,6 +4,8 @@ import { uploadButtons } from "../components.js";
 import * as backup from "../core/backup.js";
 import * as db from "../core/db.js";
 import * as V from "../core/vault.js";
+import * as native from "../native.js";
+import * as scanner from "../core/scanner.js";
 import { errText, fmtDate, L, setLang, t } from "../i18n.js";
 import { navigate, render } from "../router.js";
 import { loadCategories, store } from "../store.js";
@@ -21,6 +23,7 @@ const STATE_KIND = { always: "ok", connected: "ok", not_connected: "", server_ve
 const SRC_ICON = { device_files: "phone", whatsapp: "msg", gmail: "mail", gdrive: "cloud" };
 
 export async function accountsView(root) {
+  if (native.isNative) return nativeSourcesView(root);
   const { connectors } = await api("/connectors");
   root.append(h("div", { class: "page-head" }, h("h1", {}, t("accounts"))), h("p", { class: "muted" }, t("accounts_intro")));
   const list = h("ol", { class: "sources" });
@@ -166,4 +169,63 @@ function pinDialog(changing) {
       lockVault(); s.close(); toast(t("saved"), "ok"); render();
     } catch (ex) { err.textContent = errText(ex.code); }
   } }, h("p", { class: "meta muted" }, t("vault_desc")), cur, p1, p2, err, h("button", { class: "btn primary" }, t("save"))));
+}
+
+
+// ---- Android app: scan the phone --------------------------------------------------------------------
+export function scanCard(compact = false) {
+  const status = h("p", { class: "meta" });
+  const bar = h("div", { class: "progress", hidden: true }, h("span", { style: { width: "0%" } }));
+  const btn = h("button", { class: "btn primary block" }, icon("search", 18), t("scan_now"));
+  const show = (s) => {
+    if (s.running) {
+      bar.hidden = false;
+      bar.firstChild.style.width = `${s.total ? Math.round((100 * s.done) / s.total) : 3}%`;
+      status.textContent = t("scanning", { done: s.done, total: s.total || "…" }) + (s.found ? ` · ${s.found} ✓` : "");
+      btn.replaceChildren(icon("x", 18), t("scan_stop"));
+    } else {
+      bar.hidden = true;
+      btn.replaceChildren(icon("search", 18), t("scan_now"));
+    }
+  };
+  btn.onclick = async () => {
+    if (scanner.state.running) { scanner.state.stop = true; return; }
+    const inf = native.info();
+    if (!inf.media && !inf.folders.length) await native.requestMedia();
+    const r = await scanner.run();
+    toast(t("scan_done", { n: r.found }), "ok");
+    render();
+  };
+  const off = scanner.onProgress(show);
+  scanner.lastScan().then((d) => { if (!scanner.state.running) status.textContent = d ? t("last_scan", { d: fmtDate(d) }) : t("never_scanned"); });
+  show(scanner.state);
+  const card = h("section", { class: "card scan-card" }, h("h2", {}, icon("search", 16), " ", t("scan_phone")),
+    compact ? null : h("p", { class: "meta muted" }, t("scan_desc")), bar, status, btn);
+  new MutationObserver((_, obs) => { if (!document.body.contains(card)) { off(); obs.disconnect(); } }).observe(document.body, { childList: true, subtree: true });
+  return card;
+}
+
+async function nativeSourcesView(root) {
+  const inf = native.info();
+  const row = (ic, title, desc, ok, action) => h("li", { class: "source" },
+    h("div", { class: "thumb sm" }, icon(ic, 20)),
+    h("div", { class: "doc-main" }, h("div", { class: "doc-title" }, title),
+      ok ? h("span", { class: "badge ok" }, icon("check", 12), t("granted")) : null,
+      h("p", { class: "meta muted" }, desc)),
+    action);
+  const folderOf = (kind) => inf.folders.filter((f) => f.kind === kind);
+  const folderBtn = (kind) => h("button", { class: "btn ghost sm", onclick: async () => { await native.addFolder(kind); render(); } }, t("choose_folder"));
+  const granted = (kind) => folderOf(kind).map((f) => h("div", { class: "row tight meta" }, icon("folder", 13), f.label,
+    h("button", { class: "icon-btn", "aria-label": t("remove"), onclick: () => { native.removeFolder(f.uri); render(); } }, icon("x", 13))));
+  root.append(h("div", { class: "page-head" }, h("h1", {}, t("accounts"))),
+    scanCard(),
+    h("ol", { class: "sources" },
+      row("image", t("src_gallery"), t("src_gallery_desc"), inf.media,
+        inf.media ? null : h("button", { class: "btn primary sm", onclick: async () => { await native.requestMedia(); render(); } }, t("allow"))),
+      row("download", t("src_downloads"), t("src_downloads_desc"), folderOf("downloads").length, h("div", { class: "col tight" }, folderBtn("downloads"), granted("downloads"))),
+      row("msg", t("src_whatsapp"), t("src_whatsapp_desc"), folderOf("whatsapp").length, h("div", { class: "col tight" }, folderBtn("whatsapp"), granted("whatsapp"))),
+      row("folder", t("src_other"), "", folderOf("folder").length, h("div", { class: "col tight" }, folderBtn("folder"), granted("folder"))),
+      row("send", t("share_in"), t("src_share_desc"), true, null),
+      row("mail", "Gmail", t("exp_server_only"), false, null)),
+    h("div", { class: "row end" }, h("button", { class: "btn ghost sm", onclick: async () => { await scanner.forgetScanned(); toast(t("saved"), "ok"); } }, t("rescan_all"))));
 }

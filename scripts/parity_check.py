@@ -25,7 +25,8 @@ for p in sorted((root / "backend/tests/fixtures").iterdir()):
 for t in ["אני צריך מסמכים למלגת מילואים", "Identity card and appendix, reserve order, proof of enrollment, and bank account confirmation.",
           "תעודת זהות וספח, צו מילואים, אישור לימודים ואישור ניהול חשבון", "I need the documents for my apartment insurance claim",
           "Find my latest bank confirmation", "צריך להגיש שוב מלגת מילואים", "also the reserve service confirmation", "find my passport",
-          "כן", "זה הכל", "מה צריך להנחה בארנונה", "find my vehicle license and marriage certificate", "I need documents for a mortgage"]:
+          "כן", "זה הכל", "מה צריך להנחה בארנונה", "find my vehicle license and marriage certificate", "I need documents for a mortgage",
+          "תמצא לי את אישור ניהול החשבון", "איפה תעודת הזהות והספח", "צריך את אישור הלימודים ואת תלוש השכר"]:
     i = parse(t)
     out["intents"].append({"t": t, "py": [i.process_key, i.doc_types, i.custom_purpose, i.yes, i.no, i.nothing_more, i.adding, i.find_only, i.lang]})
 

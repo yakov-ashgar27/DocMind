@@ -3,3 +3,8 @@ __pycache__/
 *.pyc
 .env
 .pytest_cache/
+android/.gradle/
+android/build/
+android/app/build/
+android/app/src/main/assets/www/
+mobile/vendor/tesseract/

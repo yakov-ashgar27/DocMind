@@ -48,9 +48,18 @@ def _alias_regex(alias: str) -> re.Pattern:
     return re.compile(f"(?<![\\w]){a}(?![\\w])")
 
 
-_ALIAS_TABLE = sorted(((a, dt, _alias_regex(a)) for dt, aliases in REQUEST_ALIASES.items() for a in aliases),
+def _variants(alias: str) -> list[str]:
+    """Hebrew construct phrases take the definite article on the LAST word:
+    "אישור ניהול חשבון" -> "אישור ניהול החשבון", "תעודת זהות" -> "תעודת הזהות"."""
+    words = alias.split()
+    if len(words) > 1 and re.search(f"[{HEB}]", words[-1]) and not words[-1].startswith("ה"):
+        return [alias, " ".join(words[:-1] + ["ה" + words[-1]])]
+    return [alias]
+
+
+_ALIAS_TABLE = sorted(((v, dt, _alias_regex(v)) for dt, aliases in REQUEST_ALIASES.items() for a in aliases for v in _variants(a)),
                       key=lambda x: -len(x[0]))
-_PROC_TABLE = sorted(((t, pk, _alias_regex(t)) for pk, p in PROCESSES.items() for t in p["triggers"]),
+_PROC_TABLE = sorted(((v, pk, _alias_regex(v)) for pk, p in PROCESSES.items() for t in p["triggers"] for v in _variants(t)),
                      key=lambda x: -len(x[0]))
 
 _TASK_PATTERNS = [

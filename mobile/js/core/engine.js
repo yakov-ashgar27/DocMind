@@ -13,8 +13,8 @@ const joinList = (items, lang) => items.length <= 1 ? (items[0] || "") : items.s
 const slug = (s) => s.toLowerCase().replace(/[^\p{L}\p{N}]+/gu, "-").replace(/^-|-$/g, "").slice(0, 60) || "task";
 
 export const SOURCES = [
-  { key: "device_files", order: 1, label: { en: "Documents on this phone", he: "מסמכים בטלפון הזה" }, kinds: ["upload"], status: "found_local" },
-  { key: "whatsapp", order: 4, label: { en: "WhatsApp (imported chats)", he: "וואטסאפ (צ'אטים שיובאו)" }, kinds: ["whatsapp_import"], status: "found_whatsapp" },
+  { key: "device_files", order: 1, label: { en: "Documents on this phone", he: "מסמכים בטלפון הזה" }, kinds: ["upload", "gallery", "downloads", "folder"], status: "found_local" },
+  { key: "whatsapp", order: 4, label: { en: "WhatsApp (imported chats)", he: "וואטסאפ (צ'אטים שיובאו)" }, kinds: ["whatsapp_import", "whatsapp"], status: "found_whatsapp" },
 ];
 export const UNAVAILABLE = [
   { key: "gmail", order: 5, label: { en: "Gmail", he: "Gmail" }, state: "server_version_only" },

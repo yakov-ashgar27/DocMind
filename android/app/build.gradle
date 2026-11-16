@@ -1,0 +1,47 @@
+plugins { id "com.android.application" }
+
+def ksFile = System.getenv("DOCMIND_KEYSTORE") ?: "docmind-public.keystore"
+
+android {
+    namespace "io.github.yakovashgar27.docmind"
+    compileSdk 35
+    defaultConfig {
+        applicationId "io.github.yakovashgar27.docmind"
+        minSdk 26
+        targetSdk 35
+        versionCode((System.getenv("GITHUB_RUN_NUMBER") ?: "1").toInteger())
+        versionName "1.0." + (System.getenv("GITHUB_RUN_NUMBER") ?: "0")
+    }
+    signingConfigs {
+        release {
+            storeFile file(ksFile)
+            storePassword System.getenv("DOCMIND_KEYSTORE_PASSWORD") ?: "docmind-public"
+            keyAlias System.getenv("DOCMIND_KEY_ALIAS") ?: "docmind"
+            keyPassword System.getenv("DOCMIND_KEY_PASSWORD") ?: "docmind-public"
+        }
+    }
+    buildTypes {
+        release {
+            minifyEnabled false
+            signingConfig signingConfigs.release
+        }
+    }
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+    androidResources { noCompress += ["wasm", "gz", "traineddata", "mjs"] }
+}
+
+dependencies {
+    implementation "androidx.webkit:webkit:1.12.1"
+    implementation "androidx.core:core:1.13.1"
+}
+
+// The phone app (mobile/) is the UI: copy it into the APK's assets on every build.
+tasks.register("copyWeb", Copy) {
+    from("$rootDir/../mobile")
+    into("$projectDir/src/main/assets/www")
+    exclude("sw.js")
+}
+preBuild.dependsOn("copyWeb")

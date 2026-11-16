@@ -72,6 +72,14 @@ export function onOcrProgress(fn) { ocrProgress = fn; }
 async function ocrWorker() {
   if (!workerP) {
     workerP = (async () => {
+      const { info, isNative } = await import("../native.js");
+      if (isNative && info().bundledOcr) {
+        // Android app: the OCR engine and Hebrew/English language data ship inside the APK (works offline).
+        const base = new URL("../../vendor/tesseract/", import.meta.url).href;
+        await loadScript(base + "tesseract.min.js");
+        return window.Tesseract.createWorker(["heb", "eng"], 1, { workerPath: base + "worker.min.js", corePath: base + "core",
+          langPath: base + "lang", logger: (m) => ocrProgress(m) });
+      }
       await loadScript(TESSERACT_URL);
       return window.Tesseract.createWorker(["heb", "eng"], 1, { logger: (m) => ocrProgress(m) });
     })().catch((e) => { workerP = null; throw Object.assign(new Error("ocr_unavailable"), { cause: e }); });

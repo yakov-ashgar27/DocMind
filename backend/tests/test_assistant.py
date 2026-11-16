@@ -17,6 +17,9 @@ def test_intent_parser_hebrew_and_english():
     it = parse("I need the documents for my apartment insurance claim")
     assert it.custom_purpose == "apartment insurance claim" and it.is_task
     assert parse("Find my latest bank confirmation").doc_types == ["bank_confirmation"]
+    assert parse("תמצא לי את אישור ניהול החשבון").doc_types == ["bank_confirmation"]
+    assert parse("איפה תעודת הזהות והספח").doc_types == ["id_card", "id_appendix"]
+    assert parse("צריך את אישור הלימודים ואת תלוש השכר").doc_types == ["enrollment_proof", "payslip"]
 
 
 def test_full_learning_flow_english(library):
