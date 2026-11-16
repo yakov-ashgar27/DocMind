@@ -1,0 +1,15 @@
+{
+  "name": "DocMind",
+  "image": "mcr.microsoft.com/devcontainers/python:3.12",
+  "onCreateCommand": "sudo apt-get update && sudo apt-get install -y --no-install-recommends tesseract-ocr tesseract-ocr-heb tesseract-ocr-eng poppler-utils imagemagick libheif1 && pip install -r backend/requirements.txt",
+  "postStartCommand": "bash .devcontainer/start-server.sh",
+  "forwardPorts": [8000],
+  "portsAttributes": {
+    "8000": { "label": "DocMind", "onAutoForward": "openBrowser" }
+  },
+  "containerEnv": {
+    "DOCMIND_DATA_DIR": "/workspaces/docmind-data",
+    "DOCMIND_SECURE_COOKIES": "1"
+  },
+  "hostRequirements": { "cpus": 2 }
+}

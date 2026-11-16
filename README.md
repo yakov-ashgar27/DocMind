@@ -1,5 +1,7 @@
 # DocMind — Intelligent Personal Document Assistant
 
+[![Open in GitHub Codespaces](https://github.com/codespaces/badge.svg)](https://codespaces.new/yakov-ashgar27/DocMind)
+
 > Tell it what you need. It finds what you have, remembers what you need, and helps you obtain what is missing.
 
 DocMind is a working Stage 1 product. It is a mobile-first web app (installable PWA) with full Hebrew RTL and English, on a modular Python backend. The backend provides encrypted storage, on-device OCR, automatic classification, semantic search, a bilingual assistant, consent-based personal memory, and document bundles.
