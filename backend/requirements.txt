@@ -1,0 +1,13 @@
+flask>=3.0
+pyjwt>=2.8
+cryptography>=42
+pytesseract>=0.3.10
+pillow>=10
+pdfplumber>=0.11
+pypdf>=4
+scikit-learn>=1.4
+numpy>=1.26
+requests>=2.31
+reportlab>=4        # sample document generator only
+pytest>=8           # tests
+playwright>=1.40    # optional UI walkthrough

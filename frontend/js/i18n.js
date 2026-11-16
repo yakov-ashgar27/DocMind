@@ -1,0 +1,133 @@
+// UI strings. Hebrew is the default; layout direction follows the language.
+const S = {
+  he: {
+    app: "DocMind", tagline: "תגיד מה צריך. הוא ימצא מה יש לך, יזכור מה נדרש ויעזור להשיג מה שחסר.",
+    login: "התחברות", register: "יצירת חשבון", email: "אימייל", password: "סיסמה", name: "שם",
+    have_account: "כבר יש לי חשבון", no_account: "אין לי חשבון עדיין", pw_hint: "לפחות 10 תווים, אות גדולה ומספר",
+    nav_home: "בית", nav_assistant: "עוזר", nav_library: "מסמכים", nav_bundles: "תיקים", nav_more: "עוד",
+    hello: "שלום, {name}", ask_placeholder: "מה צריך? למשל: מסמכים למלגת מילואים",
+    send: "שליחה", new_chat: "שיחה חדשה", history: "שיחות קודמות",
+    upload: "העלאת מסמכים", import_wa: "ייבוא צ'אט מוואטסאפ", uploading: "מעלה…",
+    search_docs: "חיפוש חופשי בתוכן המסמכים…", all: "הכל", processing: "בעיבוד…", failed: "העיבוד נכשל",
+    documents: "מסמכים", checklists: "רשימות שמורות", bundles: "תיקי מסמכים", needs_attention: "דורש תשומת לב",
+    recent: "נוספו לאחרונה", start_from_memory: "להתחיל מרשימה שמורה", nothing_yet: "אין עדיין",
+    empty_library: "הספרייה ריקה. העלה/י מסמכים — אני אזהה ואסווג אותם אוטומטית, גם אם לשם הקובץ אין משמעות.",
+    k_expired: "פג תוקף", k_expiring: "פג בקרוב", k_maybe_outdated: "ייתכן שלא עדכני", k_duplicate: "כפילות אפשרית",
+    k_unclassified: "לא זוהה", k_failed: "העיבוד נכשל",
+    st_found_local: "נמצא במכשיר", st_found_whatsapp: "נמצא בוואטסאפ", st_found_gmail: "נמצא ב-Gmail",
+    st_found_gdrive: "נמצא ב-Google Drive", st_found_external_not_downloaded: "נמצא בחוץ — עדיין לא הורד",
+    st_not_found: "לא נמצא אחרי חיפוש בכל המקורות", st_search_incomplete: "החיפוש לא הושלם",
+    uncertain: "התאמה לפי תוכן — כדאי לוודא", alternatives: "חלופות", preview: "תצוגה", download: "הורדה",
+    open_email: "פתיחת המייל", open_file: "פתיחה ב-Drive", download_to_library: "הורדה לספרייה",
+    suggested_source: "מקור רשמי מוצע", official_site: "לאתר הרשמי", previously_found: "בפעם הקודמת נמצא ב: {src}",
+    searched: "נבדקו", not_connected: "לא מחוברים", connect: "חיבור", suggestion: "הצעה", in_library: "קיים בספרייה",
+    remember: "לזכור", not_now: "לא עכשיו",
+    doc_type: "סוג מסמך", category: "קטגוריה", issuer: "גורם מנפיק", doc_date: "תאריך המסמך", expiry: "תוקף עד",
+    tags: "תגיות", tags_hint: "מופרד בפסיקים", save: "שמירה", saved: "נשמר", cancel: "ביטול", delete: "מחיקה",
+    archive: "העברה לארכיון", unarchive: "החזרה מהארכיון", reprocess: "עיבוד מחדש", extracted_text: "טקסט שחולץ (OCR מקומי)",
+    source: "מקור", added: "נוסף", confirm_delete_doc: "למחוק את המסמך לצמיתות? הפעולה אינה הפיכה.",
+    dup_of: "נראה כמו עותק של: {name}", keep_both: "לשמור את שניהם", archive_copy: "לארכב את העותק", not_dup: "זה לא כפול",
+    bundle_new: "תיק חדש", bundle_name: "שם התיק", download_selected: "הורדת {n} קבצים בנפרד", combined_pdf: "PDF מאוחד (אופציונלי)",
+    missing_doc: "חסר — לבחור מסמך", choose_doc: "בחירת מסמך מהספרייה", rename_file: "שם קובץ", remove: "הסרה",
+    add_item: "הוספת מסמך לתיק", downloading: "מוריד {i} מתוך {n}…", not_local: "לא הורד עדיין",
+    memory: "זיכרון אישי", memory_intro: "מה DocMind למד עליך. שום דבר לא נשמר בלי אישור שלך, והכל ניתן לעריכה ומחיקה.",
+    pending: "ממתין לאישור", locations: "איפה מצאת מסמכים", wipe_memory: "מחיקת כל הזיכרון",
+    confirm_wipe: "למחוק את כל הרשימות והזיכרון האישי?", items: "מסמכים", used_times: "שימושים: {n}", edit: "עריכה",
+    add: "הוספה", accounts: "מקורות מחוברים", accounts_intro: "סדר החיפוש: DocMind בודק את כל המקורות המחוברים לפי הסדר הזה לפני שהוא קובע שמסמך חסר.",
+    s_always: "פעיל", s_connected: "מחובר", s_not_connected: "לא מחובר", s_not_configured: "דורש הגדרת שרת",
+    s_requires_native_app: "באפליקציית Android", s_reauth_required: "נדרש חיבור מחדש",
+    exp_not_configured: "החיבור ל-Google דורש פרטי OAuth של המפעיל (GOOGLE_CLIENT_ID). ראו docs/INTEGRATIONS.md.",
+    exp_native: "סריקת הגלריה וההורדות דורשת הרשאות אחסון של Android — מתוכנן לאפליקציה (שלב 3). בינתיים: העלאה ידנית או שיתוף.",
+    exp_whatsapp: "לוואטסאפ אין API רשמי לקריאת צ'אטים אישיים. הדרך הנתמכת: בצ'אט ← ⋮ ← עוד ← ייצוא צ'אט ← צירוף מדיה, ואז לייבא את קובץ ה-ZIP כאן.",
+    disconnect: "ניתוק", categories: "קטגוריות", new_category: "קטגוריה חדשה", settings: "הגדרות ופרטיות",
+    language: "שפה", ai_consent: "סיוע AI חיצוני", ai_consent_desc: "שליחת נוסח הבקשה בלבד (לא מסמכים) לספק ה-AI כדי להבין בקשות מורכבות.",
+    ai_unavailable: "לא הוגדר ספק AI בשרת — העוזר פועל במנוע המקומי.", remember_locations: "לזכור היכן נמצאו מסמכים",
+    shared: "למידה משותפת אנונימית", shared_desc: "כבויה עד להשלמת מנגנוני פרטיות. לא משתפת מסמכים, תוכן או פרטים אישיים.",
+    security: "אבטחה", logout: "התנתקות", logout_all: "התנתקות מכל המכשירים", change_pw: "שינוי סיסמה",
+    current_pw: "סיסמה נוכחית", new_pw: "סיסמה חדשה", export: "ייצוא הנתונים שלי", audit: "יומן פעולות",
+    delete_account: "מחיקת החשבון וכל המסמכים", confirm_delete_account: "הקלד/י סיסמה כדי למחוק את החשבון לצמיתות",
+    privacy_note: "המסמכים מוצפנים (AES-256) ומעובדים בשרת שלך — כולל OCR. שום מסמך לא נשלח לספק AI.",
+    more: "עוד", error: "משהו השתבש", retry: "נסה/י שוב", back: "חזרה", close: "סגירה", unknown_type: "לא מזוהה",
+    files_added: "{n} מסמכים נוספו ומעובדים", wa_imported: "יובאו {n} קבצים מהצ'אט", bundle_created: "התיק נוצר",
+    errors: {invalid_credentials: "אימייל או סיסמה שגויים", email_taken: "האימייל כבר רשום", password_too_short: "הסיסמה קצרה מדי",
+      password_too_weak: "הסיסמה חלשה מדי", invalid_email: "אימייל לא תקין", rate_limited: "יותר מדי ניסיונות, נסה/י מאוחר יותר",
+      unsupported_file_type: "סוג קובץ לא נתמך", file_too_large: "הקובץ גדול מדי", not_configured: "המקור לא הוגדר בשרת"},
+  },
+  en: {
+    app: "DocMind", tagline: "Tell it what you need. It finds what you have, remembers what you need, and helps you get what's missing.",
+    login: "Sign in", register: "Create account", email: "Email", password: "Password", name: "Name",
+    have_account: "I already have an account", no_account: "I don't have an account", pw_hint: "At least 10 characters, a capital letter and a number",
+    nav_home: "Home", nav_assistant: "Assistant", nav_library: "Documents", nav_bundles: "Bundles", nav_more: "More",
+    hello: "Hi, {name}", ask_placeholder: "What do you need? e.g. documents for a reserve scholarship",
+    send: "Send", new_chat: "New chat", history: "Previous chats",
+    upload: "Upload documents", import_wa: "Import WhatsApp chat", uploading: "Uploading…",
+    search_docs: "Search inside your documents…", all: "All", processing: "Processing…", failed: "Processing failed",
+    documents: "Documents", checklists: "Saved checklists", bundles: "Bundles", needs_attention: "Needs attention",
+    recent: "Recently added", start_from_memory: "Start from a saved checklist", nothing_yet: "Nothing yet",
+    empty_library: "Your library is empty. Upload documents — I'll recognise and categorise them, even when the filename means nothing.",
+    k_expired: "Expired", k_expiring: "Expiring soon", k_maybe_outdated: "May be outdated", k_duplicate: "Possible duplicate",
+    k_unclassified: "Unclassified", k_failed: "Processing failed",
+    st_found_local: "Found locally", st_found_whatsapp: "Found in WhatsApp", st_found_gmail: "Found in Gmail",
+    st_found_gdrive: "Found in Google Drive", st_found_external_not_downloaded: "Found externally — not downloaded",
+    st_not_found: "Not found after searching all available sources", st_search_incomplete: "Search incomplete",
+    uncertain: "Matched by content — please verify", alternatives: "Alternatives", preview: "Preview", download: "Download",
+    open_email: "Open the email", open_file: "Open in Drive", download_to_library: "Download to library",
+    suggested_source: "Suggested official source", official_site: "Official site", previously_found: "Last time it was in: {src}",
+    searched: "Searched", not_connected: "Not connected", connect: "Connect", suggestion: "Suggestion", in_library: "In your library",
+    remember: "Remember", not_now: "Not now",
+    doc_type: "Document type", category: "Category", issuer: "Issuer", doc_date: "Document date", expiry: "Valid until",
+    tags: "Tags", tags_hint: "comma separated", save: "Save", saved: "Saved", cancel: "Cancel", delete: "Delete",
+    archive: "Archive", unarchive: "Unarchive", reprocess: "Reprocess", extracted_text: "Extracted text (on-device OCR)",
+    source: "Source", added: "Added", confirm_delete_doc: "Permanently delete this document? This can't be undone.",
+    dup_of: "Looks like a copy of: {name}", keep_both: "Keep both", archive_copy: "Archive this copy", not_dup: "Not a duplicate",
+    bundle_new: "New bundle", bundle_name: "Bundle name", download_selected: "Download {n} separate files", combined_pdf: "Combined PDF (optional)",
+    missing_doc: "Missing — choose a document", choose_doc: "Choose from library", rename_file: "File name", remove: "Remove",
+    add_item: "Add a document", downloading: "Downloading {i} of {n}…", not_local: "Not downloaded yet",
+    memory: "Personal memory", memory_intro: "What DocMind has learned about you. Nothing is saved without your approval; everything can be edited or deleted.",
+    pending: "Waiting for your approval", locations: "Where you found documents", wipe_memory: "Delete all memory",
+    confirm_wipe: "Delete all checklists and personal memory?", items: "documents", used_times: "Used {n}×", edit: "Edit",
+    add: "Add", accounts: "Connected sources", accounts_intro: "Search order: DocMind checks every connected source in this order before it ever says a document is missing.",
+    s_always: "Active", s_connected: "Connected", s_not_connected: "Not connected", s_not_configured: "Needs server setup",
+    s_requires_native_app: "Android app", s_reauth_required: "Reconnect needed",
+    exp_not_configured: "Google sources need the operator's OAuth credentials (GOOGLE_CLIENT_ID). See docs/INTEGRATIONS.md.",
+    exp_native: "Scanning the gallery and downloads needs Android storage permissions — planned for the native app (Stage 3). Meanwhile, upload or share files.",
+    exp_whatsapp: "WhatsApp has no official API for reading personal chats. Supported route: in a chat ⋮ → More → Export chat → Include media, then import the ZIP here.",
+    disconnect: "Disconnect", categories: "Categories", new_category: "New category", settings: "Settings & privacy",
+    language: "Language", ai_consent: "External AI assistance", ai_consent_desc: "Send only your request wording (never documents) to the AI provider to understand complex requests.",
+    ai_unavailable: "No AI provider is configured on the server — the assistant uses the local engine.", remember_locations: "Remember where documents were found",
+    shared: "Anonymous shared learning", shared_desc: "Off until privacy mechanisms are complete. Never shares documents, contents or personal details.",
+    security: "Security", logout: "Sign out", logout_all: "Sign out of all devices", change_pw: "Change password",
+    current_pw: "Current password", new_pw: "New password", export: "Export my data", audit: "Activity log",
+    delete_account: "Delete account and all documents", confirm_delete_account: "Enter your password to permanently delete your account",
+    privacy_note: "Documents are encrypted (AES-256) and processed on your server — OCR included. No document is ever sent to an AI provider.",
+    more: "More", error: "Something went wrong", retry: "Retry", back: "Back", close: "Close", unknown_type: "Unclassified",
+    files_added: "{n} documents added and processing", wa_imported: "Imported {n} files from the chat", bundle_created: "Bundle created",
+    errors: {invalid_credentials: "Wrong email or password", email_taken: "Email already registered", password_too_short: "Password too short",
+      password_too_weak: "Password too weak", invalid_email: "Invalid email", rate_limited: "Too many attempts, try later",
+      unsupported_file_type: "Unsupported file type", file_too_large: "File too large", not_configured: "Source not configured on the server"},
+  },
+};
+
+let lang = (navigator.language || "he").toLowerCase().startsWith("he") ? "he" : "en";
+try { lang = localStorage.getItem("dm_lang") || lang; } catch { /* storage unavailable */ }
+
+export function getLang() { return lang; }
+export function setLang(l) {
+  lang = l === "en" ? "en" : "he";
+  try { localStorage.setItem("dm_lang", lang); } catch { /* ignore */ }
+  document.documentElement.lang = lang;
+  document.documentElement.dir = lang === "he" ? "rtl" : "ltr";
+}
+export function t(key, vars = {}) {
+  let s = S[lang][key] ?? S.en[key] ?? key;
+  for (const [k, v] of Object.entries(vars)) s = s.replace(`{${k}}`, v);
+  return s;
+}
+export function errText(code) { return S[lang].errors[code] || t("error") + (code ? ` (${code})` : ""); }
+export function fmtDate(iso) {
+  if (!iso) return "";
+  const d = new Date(iso.length === 10 ? iso + "T00:00:00" : iso);
+  return d.toLocaleDateString(lang === "he" ? "he-IL" : "en-GB", { day: "numeric", month: "short", year: "numeric" });
+}
+export function L(obj) { return obj ? (obj[lang] ?? obj.en ?? "") : ""; }
+setLang(lang);

@@ -1,0 +1,19 @@
+{
+  "name": "DocMind",
+  "short_name": "DocMind",
+  "description": "Tell it what you need. It finds what you have, remembers what you need, and helps you get what's missing.",
+  "start_url": "/#/home",
+  "display": "standalone",
+  "background_color": "#f6f5f1",
+  "theme_color": "#14213d",
+  "dir": "auto",
+  "lang": "he",
+  "icons": [
+    {
+      "src": "/icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
