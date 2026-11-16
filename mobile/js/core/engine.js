@@ -32,7 +32,7 @@ async function hiddenCats() {
   return vaultOpen() ? new Set() : new Set(await repo.lockedCategories());
 }
 
-async function findRequirement(dt, lbl, lang) {
+async function findRequirement(dt, lbl, lang, extra = "") {
   const all = [...(await repo.docs()).values()].filter((d) => !d.archived && !d.duplicate_of && (d.status === "ready" || d.locked));
   const hits = [];
   for (const src of SOURCES) {
@@ -52,6 +52,17 @@ async function findRequirement(dt, lbl, lang) {
   }
   const memo = dt ? await repo.getRecord("mf:loc:" + dt) : null;
   const req = { doc_type: dt, label: lbl || label(dt, lang) };
+  const native = await import("../native.js");
+  if (!hits.some((h) => h.match === "exact_type") && native.isNative) {
+    // Not in DocMind yet: look through every file on the phone and let the user pick.
+    const pi = await import("./phoneindex.js");
+    const q = dt in DOC_TYPES ? [lbl || label(dt, lang), DOC_TYPES[dt].he, DOC_TYPES[dt].en, ...(C.REQUEST_ALIASES[dt] || [])].join(" ") : lbl;
+    const phone = await pi.search(extra ? `${extra} ${q}` : q, { docType: dt, limit: 6 });
+    if (phone.length) {
+      return { requirement: req, status: hits.length ? hits[0].status : "found_on_phone", best: hits[0] || null, alternatives: hits.slice(1, 4),
+        freshness: { state: "unknown" }, uncertain: false, acquisition: null, phone, previously_found_in: null };
+    }
+  }
   if (!hits.length) {
     return { requirement: req, status: "not_found", best: null, alternatives: [], acquisition: dt ? acquisition(dt, lang) : null,
       previously_found_in: memo ? { source: memo.source, at: memo.at } : null };
@@ -63,11 +74,11 @@ async function findRequirement(dt, lbl, lang) {
     uncertain: best.match === "content_match", acquisition: null, previously_found_in: memo ? { source: memo.source, at: memo.at } : null };
 }
 
-async function searchAll(items, lang) {
+async function searchAll(items, lang, extra = "") {
   const plan = { searched: SOURCES.map(({ key, label: l, order }) => ({ key, label: l, order, state: "connected" })),
     unavailable: UNAVAILABLE, failed: [] };
   const results = [];
-  for (const i of items) results.push(await findRequirement(i.doc_type, i.label, lang));
+  for (const i of items) results.push(await findRequirement(i.doc_type, i.label, lang, extra));
   return { plan, results };
 }
 
@@ -151,13 +162,13 @@ async function route(conv, it, lang, st) {
     return askChecklist(conv, task, lang, true);
   }
   const task = s.active_task;
-  if (task && it.doc_types.length && !it.is_task && !it.find_only) return addToTask(conv, task, it.doc_types, lang);
+  if (task && it.doc_types.length && !it.is_task && !it.find_only) return addToTask(conv, task, it.doc_types, lang, it.free_text);
   if (task && (it.nothing_more || it.no) && !it.is_task) {
     const { results } = await searchAll(task.items, lang);
     return { text: t("complete", lang), blocks: [], actions: [bundleAction(task.label, results, lang)], quick_replies: [] };
   }
   if (it.is_task) return startTask(conv, it, lang);
-  if (it.doc_types.length) return find(it.doc_types, lang);
+  if (it.doc_types.length) return find(it.doc_types, lang, it.free_text);
   if (it.greeting) return { text: t("greeting", lang, { name: st.display_name || "" }), blocks: [], quick_replies: starters(lang) };
   if (it.help) return { text: t("help", lang), blocks: [], quick_replies: starters(lang) };
   return freeSearch(it.free_text, lang);
@@ -180,6 +191,14 @@ async function startTask(conv, it, lang) {
     return reply;
   }
   if (it.doc_types.length) return runTask(conv, task, it.doc_types.map((d) => ({ doc_type: d, label: label(d, lang) })), lang, null);
+  // Known process: don't make the user list documents. Search the usually-required ones right away and ask what differs.
+  const typical = suggestedFor(pk);
+  if (typical.length) {
+    const reply = await runTask(conv, task, typical.map((d) => ({ doc_type: d, label: label(d, lang) })), lang, null);
+    reply.text = (lang === "he" ? `חיפשתי את המסמכים שבדרך כלל נדרשים ל${task.label}. אם אצלך הרשימה שונה — תכתוב מה להוסיף או להוריד.`
+      : `I searched for the documents usually needed for ${task.label}. If yours differ, tell me what to add or drop.`) + "\n" + reply.text;
+    return reply;
+  }
   return askChecklist(conv, task, lang);
 }
 
@@ -202,21 +221,26 @@ async function askChecklist(conv, task, lang, again = false) {
 }
 
 function summary(plan, results, lang) {
-  const found = results.filter((r) => r.status.startsWith("found")).length;
+  const found = results.filter((r) => r.status.startsWith("found") && r.status !== "found_on_phone").length;
+  const onPhone = results.filter((r) => r.status === "found_on_phone").length;
   const lines = [t("searched_summary", lang, { found, total: results.length, sources: joinList(plan.searched.map((s) => s.label[lang]), lang) })];
   const outdated = results.filter((r) => ["expired", "maybe_outdated"].includes(r.freshness?.state)).length;
   if (outdated) lines.push(t("outdated_note", lang, { n: outdated }));
+  if (onPhone) lines.push(lang === "he" ? `${onPhone} נמצאו בקבצים בטלפון — סמן/י את הנכונים ולחצ/י "ייבוא".` : `${onPhone} found in your phone's files: tick the right ones and tap "Import".`);
   return lines;
 }
 async function hintBlock(results) {
-  if (!results.some((r) => r.status === "not_found")) return null;
+  const missing = results.filter((r) => r.status === "not_found");
+  if (!missing.length) return null;
   const native = await import("../native.js");
   if (native.isNative) {
-    const scanner = await import("./scanner.js");
-    if (await scanner.lastScan()) return null;
-    return { type: "hint", key: "hint_scan", action: { label_key: "hint_scan_btn", href: "#/accounts" } };
+    const pi = await import("./phoneindex.js");
+    if (!(await pi.lastBuilt()) && !pi.state.running) return { type: "hint", key: "hint_scan", action: { label_key: "hint_scan_btn", href: "#/accounts" } };
+  } else {
+    return { type: "hint", key: "hint_web", action: { label_key: "hint_upload", href: "#/library" } };
   }
-  return { type: "hint", key: "hint_web", action: { label_key: "hint_upload", href: "#/library" } };
+  // Searched the whole phone and it isn't there: where else to look (one tap each), plus the official source.
+  return { type: "elsewhere", queries: missing.map((r) => r.requirement.label) };
 }
 const resultsBlock = (plan, results, title = null) => ({ type: "requirements", title, results, sources_searched: plan.searched,
   sources_unavailable: plan.unavailable, sources_failed: [] });
@@ -249,10 +273,14 @@ async function runTask(conv, task, items, lang, checklist) {
   return { text: lines.join("\n"), blocks, actions: [bundleAction(task.label, results, lang)], quick_replies: quick };
 }
 
-async function addToTask(conv, task, types, lang) {
+async function addToTask(conv, task, types, lang, extra = "") {
   const existing = new Set(task.items.map((i) => i.doc_type));
   const fresh = types.filter((d) => !existing.has(d)).map((d) => ({ doc_type: d, label: label(d, lang) }));
-  if (!fresh.length) return { text: t("additional", lang), blocks: [], quick_replies: [] };
+  if (!fresh.length) {
+    // Already on the list: the user is asking about it again ("didn't you find X?") -> search again and show it.
+    const r = await find(types, lang, extra);
+    return { ...r, quick_replies: nothingMoreQR(lang) };
+  }
   const { plan, results } = await searchAll(fresh, lang);
   task.items = task.items.concat(fresh);
   conv.state.active_task = task;
@@ -286,9 +314,9 @@ async function resolveInChat(conv, accept, lang) {
   return { text: t(key, lang, { task: task.label || "" }) + "\n" + t("additional", lang), blocks: [], quick_replies: nothingMoreQR(lang) };
 }
 
-async function find(types, lang) {
+async function find(types, lang, freeText = "") {
   const items = types.map((d) => ({ doc_type: d, label: label(d, lang) }));
-  const { plan, results } = await searchAll(items, lang);
+  const { plan, results } = await searchAll(items, lang, freeText);
   const lines = [t("find_summary", lang, { sources: joinList(plan.searched.map((s) => s.label[lang]), lang) }), ...summary(plan, results, lang).slice(1), t("anything_else", lang)];
   const actions = items.length > 1 ? [bundleAction(joinList(items.map((i) => i.label), lang).slice(0, 60), results, lang)] : [];
   const hint = await hintBlock(results);
@@ -296,6 +324,17 @@ async function find(types, lang) {
 }
 
 async function freeSearch(text, lang) {
+  const native = await import("../native.js");
+  if (native.isNative) {
+    const pi = await import("./phoneindex.js");
+    const phone = await pi.search(text, { limit: 10 });
+    const lib = await repo.search(text, { limit: 6, min: 0.12, exclude: await hiddenCats() });
+    const blocks = [];
+    if (lib.length) blocks.push({ type: "documents", documents: lib.map(([d, s]) => ({ ...repo.publicDoc(d), score: Math.round(s * 1000) / 1000 })) });
+    if (phone.length) blocks.push({ type: "phone_files", files: phone });
+    if (!blocks.length) return { text: t("free_none", lang), blocks: [{ type: "elsewhere", queries: [text] }], quick_replies: starters(lang) };
+    return { text: lang === "he" ? `זה מה שמצאתי עבור “${text}”:` : `Here's what I found for “${text}”:`, blocks };
+  }
   const all = [...(await repo.docs()).values()].filter((d) => !d.archived);
   if (!all.length) return { text: t("empty_library", lang), blocks: [], actions: [{ type: "open_upload", label: "+" }] };
   const hits = await repo.search(text, { limit: 6, min: 0.12, exclude: await hiddenCats() });

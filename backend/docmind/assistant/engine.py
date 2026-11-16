@@ -234,7 +234,10 @@ class Engine:
         existing = {i.get("doc_type") for i in task["items"]}
         new = [{"doc_type": d, "label": doc_type_label(d, lang)} for d in doc_types if d not in existing]
         if not new:
-            return {"text": t("additional", lang), "blocks": [], "quick_replies": []}
+            # Already on the list: the user is asking about it again ("didn't you find X?") -> search again, show it.
+            reply = self._find(conv, doc_types, lang)
+            reply["quick_replies"] = [{"label": t("nothing_more", lang), "send": "זה הכל" if lang == "he" else "that's all"}]
+            return reply
         plan, results = self._search(new, lang)
         task["items"] = task["items"] + new
         conv.state["active_task"] = task

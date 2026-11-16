@@ -5,7 +5,7 @@ import * as backup from "../core/backup.js";
 import * as db from "../core/db.js";
 import * as V from "../core/vault.js";
 import * as native from "../native.js";
-import * as scanner from "../core/scanner.js";
+import * as phoneindex from "../core/phoneindex.js";
 import { errText, fmtDate, L, setLang, t } from "../i18n.js";
 import { navigate, render } from "../router.js";
 import { loadCategories, store } from "../store.js";
@@ -172,35 +172,50 @@ function pinDialog(changing) {
 }
 
 
-// ---- Android app: scan the phone --------------------------------------------------------------------
+// ---- Android app: index the whole phone ------------------------------------------------------------
 export function scanCard(compact = false) {
   const status = h("p", { class: "meta" });
   const bar = h("div", { class: "progress", hidden: true }, h("span", { style: { width: "0%" } }));
-  const btn = h("button", { class: "btn primary block" }, icon("search", 18), t("scan_now"));
+  const btn = h("button", { class: "btn primary block" }, icon("search", 18), t("build_index"));
+  const importAll = h("button", { class: "btn ghost block", hidden: true });
+  const refreshStats = async () => {
+    const st = await phoneindex.stats();
+    if (phoneindex.state.running) return;
+    const last = await phoneindex.lastBuilt();
+    status.textContent = last ? `${t("index_stats", st)} · ${t("last_scan", { d: fmtDate(last) })}` : t("never_scanned");
+    const uris = await phoneindex.recognisedUris();
+    importAll.hidden = !uris.length;
+    importAll.textContent = t("import_all_docs", { n: uris.length });
+  };
   const show = (s) => {
     if (s.running) {
       bar.hidden = false;
       bar.firstChild.style.width = `${s.total ? Math.round((100 * s.done) / s.total) : 3}%`;
-      status.textContent = t("scanning", { done: s.done, total: s.total || "…" }) + (s.found ? ` · ${s.found} ✓` : "");
+      status.textContent = t("building_index", { done: s.done, total: s.total || "…" }) + (s.docs ? ` · ${s.docs} ✓` : "");
       btn.replaceChildren(icon("x", 18), t("scan_stop"));
     } else {
       bar.hidden = true;
-      btn.replaceChildren(icon("search", 18), t("scan_now"));
+      btn.replaceChildren(icon("search", 18), t("build_index"));
+      refreshStats();
     }
   };
   btn.onclick = async () => {
-    if (scanner.state.running) { scanner.state.stop = true; return; }
+    if (phoneindex.state.running) { phoneindex.state.stop = true; return; }
     const inf = native.info();
     if (!inf.allFiles && !inf.media && !inf.folders.length) await native.requestAllFiles();
-    const r = await scanner.run();
-    toast(t("scan_done", { n: r.found }), "ok");
-    render();
+    await phoneindex.build();
   };
-  const off = scanner.onProgress(show);
-  scanner.lastScan().then((d) => { if (!scanner.state.running) status.textContent = d ? t("last_scan", { d: fmtDate(d) }) : t("never_scanned"); });
-  show(scanner.state);
-  const card = h("section", { class: "card scan-card" }, h("h2", {}, icon("search", 16), " ", t("scan_phone")),
-    compact ? null : h("p", { class: "meta muted" }, t("scan_desc")), bar, status, btn);
+  importAll.onclick = async () => {
+    importAll.disabled = true;
+    const ids = await phoneindex.importFiles(await phoneindex.recognisedUris());
+    toast(t("files_added", { n: ids.length }), "ok");
+    importAll.disabled = false;
+    refreshStats();
+  };
+  const off = phoneindex.onProgress(show);
+  show(phoneindex.state);
+  const card = h("section", { class: "card scan-card" }, h("h2", {}, icon("search", 16), " ", t("index_title")),
+    compact ? null : h("p", { class: "meta muted" }, t("index_desc")), bar, status, btn, importAll);
   new MutationObserver((_, obs) => { if (!document.body.contains(card)) { off(); obs.disconnect(); } }).observe(document.body, { childList: true, subtree: true });
   return card;
 }
@@ -229,5 +244,5 @@ async function nativeSourcesView(root) {
       row("folder", t("src_other"), "", folderOf("folder").length, h("div", { class: "col tight" }, folderBtn("folder"), granted("folder"))),
       row("send", t("share_in"), t("src_share_desc"), true, null),
       row("mail", "Gmail", t("exp_server_only"), false, null)),
-    h("div", { class: "row end" }, h("button", { class: "btn ghost sm", onclick: async () => { await scanner.forgetScanned(); toast(t("saved"), "ok"); } }, t("rescan_all"))));
+    null);
 }

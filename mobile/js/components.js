@@ -64,7 +64,7 @@ export function docCard(doc, { onClick, extra } = {}) {
 }
 
 export function statusPill(status) {
-  const kind = status.startsWith("found_external") ? "ext" : status.startsWith("found") ? "ok" : status === "not_found" ? "bad" : "warn";
+  const kind = status.startsWith("found_external") || status === "found_on_phone" ? "ext" : status.startsWith("found") ? "ok" : status === "not_found" ? "bad" : "warn";
   const ic = kind === "ok" ? "check" : kind === "ext" ? "cloud" : "alert";
   return h("span", { class: `pill ${kind}` }, icon(ic, 14), t("st_" + status));
 }

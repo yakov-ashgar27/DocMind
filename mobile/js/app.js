@@ -140,6 +140,7 @@ async function enter() {
   armAutoLock();
   importSharedFiles();
   importNativeShared();
+  refreshPhoneIndex();
 }
 
 // Files shared to DocMind from other apps (Android share sheet) wait in the inbox until unlock.
@@ -162,6 +163,18 @@ async function importSharedFiles() {
     await inbox.delete(req);
   }
   if (n) { toast(t("files_added", { n }), "ok"); navigate("/library"); }
+}
+
+// Android app: keep the phone index fresh (incremental: only new or changed files are read).
+async function refreshPhoneIndex() {
+  const native = await import("./native.js");
+  if (!native.isNative) return;
+  const inf = native.info();
+  if (!inf.allFiles && !inf.media && !inf.folders.length) return;
+  const pi = await import("./core/phoneindex.js");
+  const last = await pi.lastBuilt();
+  if (last && Date.now() - Date.parse(last) < 6 * 3600000) return;
+  setTimeout(() => pi.build().catch(() => {}), 3000);
 }
 
 // Android app: files shared to DocMind ("Share → DocMind") are imported after unlock.

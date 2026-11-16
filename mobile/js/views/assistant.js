@@ -3,6 +3,7 @@ import { docCard, downloadDoc, freshnessBadge, openPreview, sourceLabel, statusP
 import { fmtDate, getLang, L, t, errText } from "../i18n.js";
 import { h, icon, clear, sheet, spinner, toast } from "../ui.js";
 import { navigate } from "../router.js";
+import { store } from "../store.js";
 
 let convId = null;
 
@@ -75,6 +76,8 @@ function assistantBubble(r, submit, historic = false) {
   for (const line of (r.text || "").split("\n")) if (line.trim()) el.append(h("p", {}, line));
   for (const b of r.blocks || []) {
     if (b.type === "requirements") el.append(requirementsBlock(b));
+    if (b.type === "phone_files") el.append(phoneFilesBlock(b.files, t("phone_files_title")));
+    if (b.type === "elsewhere") el.append(elsewhereBlock(b.queries));
     if (b.type === "suggestions") el.append(suggestionsBlock(b, submit, historic));
     if (b.type === "proposal") el.append(proposalBlock(b, submit, historic));
     if (b.type === "hint") el.append(h("div", { class: "card notice hint" }, icon("search", 18), h("span", {}, t(b.key)),
@@ -106,7 +109,14 @@ function requirementsBlock(b) {
   const lang = getLang();
   const card = h("div", { class: "req-card" });
   if (b.title) card.append(h("div", { class: "req-title" }, b.title));
-  for (const r of b.results) card.append(requirementRow(r));
+  const picks = new Set();
+  const importBtn = h("button", { class: "btn primary sm", hidden: true });
+  for (const r of b.results) card.append(requirementRow(r, picks, () => {
+    importBtn.hidden = !picks.size;
+    importBtn.textContent = t("import_selected", { n: picks.size });
+  }));
+  importBtn.onclick = () => doImport([...picks], importBtn, card);
+  card.append(h("div", { class: "req-import" }, importBtn));
   const foot = h("div", { class: "req-foot" },
     h("div", {}, icon("search", 14), `${t("searched")}: `, b.sources_searched.map((s) => L(s.label)).join(" · ")));
   const nc = b.sources_unavailable.filter((s) => s.state === "not_connected" || s.state === "not_configured");
@@ -116,7 +126,7 @@ function requirementsBlock(b) {
   return card;
 }
 
-function requirementRow(r) {
+function requirementRow(r, picks, onPick) {
   const row = h("div", { class: "req-row" });
   const head = h("div", { class: "req-head" }, h("span", { class: "req-label" }, r.requirement.label), statusPill(r.status));
   row.append(head);
@@ -156,6 +166,8 @@ function requirementRow(r) {
             navigate(`/doc/${document.id}`);
           } catch (err) { toast(errText(err.code), "bad"); e.currentTarget.disabled = false; }
         } }, icon("download", 14), t("download_to_library")))));
+  } else if (r.phone?.length) {
+    row.append(phoneList(r.phone, picks, onPick));
   } else if (r.acquisition) {
     const a = r.acquisition;
     row.append(h("div", { class: "acq" },
@@ -235,4 +247,68 @@ async function showHistory() {
       h("div", { class: "doc-main" }, h("div", { class: "doc-title", dir: "auto" }, c.title || "—"), h("div", { class: "meta" }, fmtDate(c.updated_at))),
       icon("chevron", 16))) : h("p", { class: "muted" }, t("nothing_yet")));
   const s = sheet(t("history"), list);
+}
+
+
+// ---- phone files (Android app) ---------------------------------------------------------------------
+const SRC = { downloads: { he: "הורדות", en: "Downloads" }, whatsapp: { he: "וואטסאפ", en: "WhatsApp" },
+  gallery: { he: "תמונות", en: "Photos" }, folder: { he: "קבצים", en: "Files" } };
+function phoneList(files, picks, onPick) {
+  const lang = getLang();
+  const box = h("div", { class: "phone-list" }, h("div", { class: "meta" }, t("on_phone_pick")));
+  for (const f of files) {
+    const cb = h("input", { type: "checkbox", "aria-label": f.name, onchange: () => { cb.checked ? picks.add(f.uri) : picks.delete(f.uri); onPick?.(); } });
+    box.append(h("label", { class: "phone-file", "data-uri": f.uri }, cb,
+      h("div", { class: "thumb sm" }, icon(f.mime === "application/pdf" ? "doc" : f.mime.startsWith("image/") ? "image" : "doc", 18)),
+      h("div", { class: "doc-main" },
+        h("div", { class: "doc-title", dir: "auto" }, f.name),
+        h("div", { class: "meta" }, [SRC[f.source]?.[lang] || f.source, fmtDate(new Date(f.modified).toISOString()),
+          f.doc_type && f.doc_type !== "unknown" ? store.meta?.doc_types?.[f.doc_type]?.[lang] : null].filter(Boolean).join(" · ")),
+        f.snippet ? h("div", { class: "meta muted snippet", dir: "auto" }, "…" + f.snippet + "…") : null)));
+  }
+  return box;
+}
+
+function phoneFilesBlock(files, title) {
+  const picks = new Set();
+  const btn = h("button", { class: "btn primary sm", hidden: true });
+  const all = h("button", { class: "linkish sm", onclick: () => {
+    const boxes = card.querySelectorAll(".phone-file input");
+    const every = picks.size !== boxes.length;
+    boxes.forEach((b) => { b.checked = every; const u = b.closest(".phone-file").dataset.uri; every ? picks.add(u) : picks.delete(u); });
+    refresh();
+  } }, getLang() === "he" ? "בחירת הכל" : "Select all");
+  const refresh = () => { btn.hidden = !picks.size; btn.textContent = t("import_selected", { n: picks.size }); };
+  const card = h("div", { class: "req-card" }, h("div", { class: "req-title" }, icon("phone", 16), " ", title),
+    h("div", { class: "req-row" }, phoneList(files, picks, refresh)), h("div", { class: "req-import row" }, btn, all));
+  btn.onclick = () => doImport([...picks], btn, card);
+  return card;
+}
+
+async function doImport(uris, btn, card) {
+  if (!uris.length) return;
+  btn.disabled = true;
+  btn.replaceChildren(spinner());
+  try {
+    const { importFiles } = await import("../core/phoneindex.js");
+    const ids = await importFiles(uris);
+    for (const u of uris) {
+      const row = card.querySelector(`.phone-file[data-uri="${CSS.escape(u)}"]`);
+      if (row) { row.classList.add("done"); row.querySelector("input").replaceWith(h("span", { class: "badge ok" }, t("imported"))); }
+    }
+    toast(t("files_added", { n: ids.length }), "ok");
+    btn.remove();
+  } catch (e) { toast(errText(e.code || e.message), "bad"); btn.disabled = false; btn.textContent = t("import_selected", { n: uris.length }); }
+}
+
+function elsewhereBlock(queries) {
+  const q = queries.join(" ");
+  const enc = encodeURIComponent(q);
+  return h("div", { class: "elsewhere" },
+    h("div", { class: "acq-label" }, icon("search", 14), t("elsewhere_title")),
+    h("div", { class: "row wrap" },
+      h("a", { class: "btn ghost sm", href: `https://mail.google.com/mail/u/0/#search/${enc}+has%3Aattachment`, target: "_blank", rel: "noopener" }, icon("mail", 15), t("search_gmail")),
+      h("a", { class: "btn ghost sm", href: `https://drive.google.com/drive/search?q=${enc}`, target: "_blank", rel: "noopener" }, icon("cloud", 15), t("search_drive")),
+      h("a", { class: "btn ghost sm", href: "https://wa.me/", target: "_blank", rel: "noopener" }, icon("msg", 15), t("open_whatsapp"))),
+    h("p", { class: "meta muted" }, t("wa_tip", { q })));
 }

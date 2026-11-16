@@ -1,12 +1,12 @@
 // Offline-first shell. App files: network-first (updates apply), OCR engine from the CDN: cache-first
 // (downloaded once, then works offline). Documents are never handled here: they live encrypted in IndexedDB.
-const VERSION = "docmind-phone-v3";
+const VERSION = "docmind-phone-v4";
 const INBOX = "docmind-share-inbox";
 const SHELL = ["./", "index.html", "manifest.webmanifest", "css/app.css", "icons/icon-192.png", "icons/icon-512.png", "icons/icon.svg",
   "js/app.js", "js/api.js", "js/catalog.js", "js/components.js", "js/i18n.js", "js/router.js", "js/store.js", "js/ui.js", "js/vault.js",
   "js/views/home.js", "js/views/assistant.js", "js/views/library.js", "js/views/bundles.js", "js/views/memory.js", "js/views/more.js",
   "js/core/backup.js", "js/core/classifier.js", "js/core/crypto.js", "js/core/db.js", "js/core/engine.js", "js/core/extract.js",
-  "js/core/intent.js", "js/core/local.js", "js/core/repo.js", "js/core/search.js", "js/core/vault.js", "js/core/zip.js", "js/core/scanner.js", "js/native.js",
+  "js/core/intent.js", "js/core/local.js", "js/core/repo.js", "js/core/search.js", "js/core/vault.js", "js/core/zip.js", "js/core/phoneindex.js", "js/native.js",
   "vendor/pdf.min.mjs", "vendor/pdf.worker.min.mjs", "vendor/pdf-lib.esm.min.js"];
 const CDN = ["cdn.jsdelivr.net", "tessdata.projectnaptha.com"];
 

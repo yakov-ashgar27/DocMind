@@ -358,3 +358,11 @@ input.compact { width: auto; max-width: 180px; min-height: 36px; }
 .scan-cta { background: var(--brand); color: #fff; border-color: var(--brand); }
 .card.notice.hint { flex-wrap: wrap; background: var(--warn-bg); border-color: transparent; cursor: default; }
 .card.notice.hint span { flex: 1 1 200px; }
+.phone-list { display: flex; flex-direction: column; gap: 6px; }
+.phone-file { display: flex; align-items: center; gap: 10px; padding: 8px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); cursor: pointer; }
+.phone-file input[type=checkbox] { width: 20px; height: 20px; accent-color: var(--brand); flex: none; }
+.phone-file.done { background: var(--ok-bg); border-color: transparent; }
+.phone-file .snippet { font-size: 12.5px; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+.req-import { padding: 0 14px 12px; }
+.req-import:empty { display: none; }
+.elsewhere { background: var(--surface-2); border-radius: 14px; padding: 12px; display: flex; flex-direction: column; gap: 8px; }

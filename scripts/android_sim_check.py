@@ -22,7 +22,11 @@ FILES = {  # uri -> (fixture, source)
     "content://wa/3": ("Scan_20261109.pdf", "whatsapp"),
     "content://wa/4": ("IMG-20261102-WA0007.jpg", "whatsapp"),          # exact duplicate of media/1: skipped
     "content://dl/5": ("download (3).pdf", "downloads"),
+    "content://dl/6": ("אישור לימודים יעקב.docx", "downloads"),      # Word, says תשפ"ז
+    "content://dl/7": ("ishur_old.doc", "downloads"),                # old Word 97 format
 }
+MIME = {"jpg": "image/jpeg", "pdf": "application/pdf", "doc": "application/msword",
+        "docx": "application/vnd.openxmlformats-officedocument.wordprocessingml.document"}
 
 
 class H(http.server.SimpleHTTPRequestHandler):
@@ -57,12 +61,13 @@ socketserver.ThreadingTCPServer.allow_reuse_address = True
 srv = socketserver.ThreadingTCPServer(("127.0.0.1", 8767), H)
 threading.Thread(target=srv.serve_forever, daemon=True).start()
 BASE = "http://127.0.0.1:8767/"
-items = [{"uri": u, "name": f, "size": (FIX / f).stat().st_size, "mime": "image/jpeg" if f.endswith("jpg") else "application/pdf",
+items = [{"uri": u, "name": f, "size": (FIX / f).stat().st_size, "mime": MIME[f.rsplit(".", 1)[1]],
           "modified": 1790000000000, "source": s} for u, (f, s) in FILES.items()]
 FAKE_NATIVE = """
 window.__saved = []; window.__shared = [];
 window.DocMindNative = {
-  info: () => JSON.stringify({ platform: 'android', sdk: 34, media: !!window.__media, folders: window.__folders || [], bundledOcr: false }),
+  info: () => JSON.stringify({ platform: 'android', sdk: 34, media: !!window.__media, allFiles: !!window.__all, folders: window.__folders || [], bundledOcr: false }),
+  requestAllFiles: () => { window.__all = true; setTimeout(() => window.__docmindNative('permission', { allFiles: true, media: true }), 10); },
   requestMedia: () => { window.__media = true; setTimeout(() => window.__docmindNative('permission', { media: true }), 10); },
   addFolder: (kind) => { (window.__folders ||= []).push({ uri: 'content://tree/' + kind, kind, label: kind }); setTimeout(() => window.__docmindNative('folder', { ok: true }), 10); },
   removeFolder: () => {},
@@ -94,27 +99,74 @@ with sync_playwright() as p:
     page.wait_for_selector(".scan-card")
     page.screenshot(path="/tmp/asim_sources.png", full_page=True)
     page.click(".scan-card .btn.primary")
-    page.wait_for_function("document.body.innerText.includes('הסריקה הסתיימה')", timeout=180000)
-    toast = page.inner_text("#toast")
+    page.wait_for_function("document.querySelector('.scan-card').innerText.includes('זוהו כמסמכים')", timeout=240000)
+    card = page.inner_text(".scan-card")
+    res["whole-phone scan indexed 7 files, 6 documents (grocery list skipped)"] = "7 קבצים" in card and "6 זוהו" in card
+    page.screenshot(path="/tmp/asim_index.png", full_page=True)
     page.goto(BASE + "#/library")
-    page.wait_for_selector(".doc-card")
-    page.wait_for_timeout(1500)
-    body = page.inner_text("body")
-    n = page.locator(".doc-card").count()
-    res["scan imported only real documents (3 of 5)"] = n == 3 and "נמצאו 3" in toast
-    res["classified: ID, bank, enrollment"] = all(x in body for x in ["תעודת זהות", "אישור ניהול חשבון", "אישור לימודים"])
+    page.wait_for_timeout(1200)
+    res["scan does not import by itself"] = page.locator(".doc-card").count() == 0
+    # 1) the user's exact case: ask for the enrollment certificate -> a list of files from the phone
     page.goto(BASE + "#/assistant?new=1")
     page.wait_for_selector(".welcome")
-    page.fill(".composer-input", "תמצא את אישור ניהול החשבון")
+    page.fill(".composer-input", "תמצא לי אישור לימודים")
     page.keyboard.press("Enter")
-    page.wait_for_selector(".req-card")
-    res["WhatsApp-folder doc reported as found in WhatsApp"] = "נמצא בוואטסאפ" in page.locator(".req-card").inner_text()
-    # rescan: nothing new
+    page.wait_for_selector(".phone-file", timeout=30000)
+    names = page.locator(".phone-file").all_inner_texts()
+    joined = " ".join(names)
+    res["search lists all 3 enrollment files on the phone"] = len(names) >= 3 and all(x in joined for x in ["download (3).pdf", "יעקב.docx", "ishur_old.doc"])
+    page.screenshot(path="/tmp/asim_pick.png", full_page=True)
+    # pick only the תשפ"ז one and import it
+    row = page.locator(".phone-file", has_text="יעקב.docx").first
+    row.locator("input[type=checkbox]").check()
+    page.locator(".req-import .btn.primary:visible").first.click()
+    page.wait_for_function("document.body.innerText.includes('יובא')", timeout=30000)
+    page.screenshot(path="/tmp/asim_after_import.png", full_page=True)
+    page.goto(BASE + "#/library")
+    page.wait_for_selector(".doc-card")
+    page.wait_for_timeout(800)
+    res["picked file imported (1 doc in library)"] = page.locator(".doc-card").count() == 1
+    # 2) free text: the academic year
+    page.goto(BASE + "#/assistant?new=1")
+    page.wait_for_selector(".welcome")
+    page.fill(".composer-input", 'אישור לימודים תשפ"ז')
+    page.keyboard.press("Enter")
+    page.wait_for_timeout(5000)
+    page.screenshot(path="/tmp/asim_year.png", full_page=True)
+    last = page.inner_text("body").split("אישור לימודים תשפ\"ז")[-1]
+    res['"תשפ"ז" finds the imported Word file first'] = "יעקב" in last or "תשפ" in last
+    # 3) not on the phone -> where else to look
+    page.goto(BASE + "#/assistant?new=1")
+    page.wait_for_selector(".welcome")
+    page.fill(".composer-input", "תמצא לי תלוש שכר")
+    page.keyboard.press("Enter")
+    page.wait_for_selector(".elsewhere", timeout=30000)
+    ew = page.locator(".elsewhere").first
+    hrefs = ew.locator("a").evaluate_all("els => els.map(e => e.href)")
+    res["not found -> Gmail/Drive/WhatsApp search links"] = any("mail.google.com" in x for x in hrefs) and any("drive.google.com" in x for x in hrefs)
+    page.screenshot(path="/tmp/asim_elsewhere.png", full_page=True)
+    # 3b) the screenshot case: inside a task, "didn't you find X?" must search again, not be ignored
+    page.goto(BASE + "#/assistant?new=1")
+    page.wait_for_selector(".welcome")
+    page.fill(".composer-input", "אני צריך מסמכים למלגת מילואים")
+    page.keyboard.press("Enter")
+    page.wait_for_function("document.querySelectorAll('.req-card').length >= 1", timeout=30000)
+    n0 = page.locator(".req-card").count()
+    page.fill(".composer-input", "לא מצאת אישור לימודים?")
+    page.keyboard.press("Enter")
+    page.wait_for_function(f"document.querySelectorAll('.req-card').length > {n0}", timeout=30000)
+    res["mid-task 'לא מצאת אישור לימודים?' searches again"] = "אישור לימודים" in page.locator(".req-card").last.inner_text()
+    # 4) import everything recognised
     page.goto(BASE + "#/accounts")
     page.wait_for_selector(".scan-card")
-    page.click(".scan-card .btn.primary")
-    page.wait_for_function("document.body.innerText.includes('נמצאו 0')", timeout=60000)
-    res["rescan skips already-seen files"] = True
+    page.wait_for_timeout(1000)
+    res["import-all offers only the 4 new distinct docs"] = "ייבוא כל 4" in page.inner_text(".scan-card")
+    page.locator(".scan-card .btn.ghost").click()
+    page.wait_for_function("document.querySelector('#toast').innerText.includes('4 מסמכים נוספו')", timeout=120000)
+    page.goto(BASE + "#/library")
+    page.wait_for_selector(".doc-card")
+    page.wait_for_timeout(2500)
+    res["import-all brings the rest (5 docs, duplicate photo skipped)"] = page.locator(".doc-card").count() == 5
     # download -> Android save
     page.goto(BASE + "#/library")
     page.wait_for_selector(".doc-card")
@@ -126,7 +178,7 @@ with sync_playwright() as p:
     # share-in from another app
     page.evaluate("window.__inbox = [{uri:'content://dl/5', name:'from-gmail.pdf', size:1, mime:'application/pdf'}]; window.__docmindNative('shared', {})")
     page.wait_for_timeout(3000)
-    res["Share → DocMind import"] = page.locator(".doc-card").count() >= 3 and "נוספו" in page.inner_text("#toast")
+    res["Share → DocMind import"] = page.locator(".doc-card").count() >= 5 and "נוספו" in page.inner_text("#toast")
     b.close()
 srv.shutdown()
 for k, v in res.items():

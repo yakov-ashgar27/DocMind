@@ -23,8 +23,8 @@ export async function homeView(root) {
 
   const native = await import("../native.js");
   if (native.isNative) {
-    const scanner = await import("../core/scanner.js");
-    if (!(await scanner.lastScan()) || scanner.state.running) {
+    const pi = await import("../core/phoneindex.js");
+    if (!(await pi.lastBuilt()) || pi.state.running) {
       root.append(h("button", { class: "card notice scan-cta", onclick: () => navigate("/accounts") }, icon("search", 20), h("span", {}, t("home_scan_cta")), icon("chevron", 16)));
     }
   }
