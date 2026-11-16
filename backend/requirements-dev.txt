@@ -1,0 +1,4 @@
+-r requirements.txt
+pytest>=8
+reportlab>=4        # sample document generator
+playwright>=1.40    # optional UI walkthrough (scripts/ui_check.py)

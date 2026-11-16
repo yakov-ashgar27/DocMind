@@ -22,6 +22,9 @@ DocMind is a working Stage 1 product. It is a mobile-first web app (installable 
 | Personal memory: checklists saved only after you approve; reused next time with "has anything changed?"; any change goes through a proposal; can be inspected, edited and deleted | ✅ |
 | Bundles: preview, select, rename, download each file **individually** with organised names; optional combined PDF | ✅ |
 | WhatsApp: import of an exported chat (.zip with media), the officially supported route | ✅ |
+| iPhone HEIC and AVIF photos (decoded locally via libheif) | ✅ |
+| Expiry reminders on the dashboard, plus a standard calendar file (.ics) for Google Calendar, iPhone or Outlook; reminder window is configurable | ✅ |
+| Background index of Gmail/Drive attachments (encrypted metadata only, nothing downloaded) for fast discovery | ⚙️ tested with a mocked Google API |
 | Gmail and Google Drive: OAuth 2.0 + PKCE, read-only search, "found but not downloaded" status, link to the exact email, import into the library | ⚙️ implemented and tested against a mocked Google API; needs your OAuth credentials (see `docs/INTEGRATIONS.md`) |
 | Shared aggregate learning: k-anonymous, opt-in, process keys only | 🔒 built and **disabled by default** |
 | External LLM (Anthropic or OpenAI) behind a provider abstraction; sends request wording only, never documents | ⚙️ optional, off unless configured **and** the user consents |
@@ -31,14 +34,24 @@ The assistant never claims to have searched a source it could not search. Each a
 
 ## Quick start
 
-Requirements: Python 3.11+, Tesseract 5 with `heb` and `eng` traineddata, and poppler-utils (`pdftoppm`).
+**🇮🇱 Hebrew step-by-step guide, including connecting Gmail for free: [`docs/SETUP_HE.md`](docs/SETUP_HE.md)**
+
+Everything DocMind uses is free and open source; there are no paid services.
+
+Requirements: Python 3.11+, Tesseract 5 with `heb` and `eng` traineddata, poppler-utils (`pdftoppm`), and optionally ImageMagick with libheif for iPhone photos.
 
 ```bash
 # Debian/Ubuntu system packages
-sudo apt install tesseract-ocr tesseract-ocr-heb poppler-utils
-cd backend
-pip install -r requirements.txt
-python run.py                       # http://127.0.0.1:8000
+sudo apt install tesseract-ocr tesseract-ocr-heb poppler-utils imagemagick
+./start.sh        # Windows: double-click start.bat
+# then open http://localhost:8000
+```
+
+Or with Docker (free):
+
+```bash
+cp .env.example .env    # fill in the keys
+docker compose up --build
 ```
 
 Development keys are generated automatically in `./data/`. For anything real, set the variables in `.env.example`.
@@ -52,7 +65,7 @@ python scripts/make_sample_docs.py backend/tests/fixtures
 ### Tests
 
 ```bash
-cd backend && python -m pytest -q                  # 44 tests: security, pipeline, assistant, bundles, connectors
+cd backend && pip install -r requirements-dev.txt && python -m pytest -q   # security, pipeline, assistant, bundles, connectors, reminders
 python ../scripts/ui_check.py http://localhost:8000 /tmp/shots   # headless browser walkthrough + screenshots
 ```
 
@@ -72,7 +85,9 @@ backend/
     api/                   REST endpoints
   tests/                   pytest suite + fictional fixtures
 frontend/                  no-build ES-module SPA, RTL-first CSS, PWA manifest + service worker
-docs/                      ARCHITECTURE, API, SECURITY, INTEGRATIONS, ROADMAP
+docs/                      ARCHITECTURE, API, SECURITY, INTEGRATIONS, ROADMAP, SETUP_HE (Hebrew guide), screenshots/
+.github/workflows/ci.yml   GitHub Actions: runs the full test suite on every push
+Dockerfile, docker-compose.yml, start.sh, start.bat
 scripts/                   sample document generator, UI walkthrough
 ```
 

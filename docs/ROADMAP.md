@@ -5,12 +5,12 @@ Authentication, upload, encrypted library, OCR (he+en), classification, natural-
 
 ## Stage 2: code complete, needs live verification
 - Gmail and Drive connectors (OAuth + PKCE, search, deep links, import). **Next step:** register an OAuth client, connect a real account, and verify Hebrew query quality on real mail.
-- Background incremental indexing of Gmail attachments, so search does not depend only on live API calls.
+- ✅ Background index of Gmail/Drive attachments (encrypted metadata only).
 
 ## Stage 3
 - Expo Android app: SAF folder access, the photo picker, a share target from WhatsApp and Files, and on-device OCR.
 - Smarter contextual suggestions, such as "your last application also used a previous scholarship approval".
-- Reminders before documents expire.
+- ✅ Expiry reminders (dashboard + .ics calendar export). Next: web push notifications (free, VAPID).
 
 ## Stage 4
 - Enable shared learning after a privacy review (k-anonymity is already in place; consider adding differential-privacy noise).

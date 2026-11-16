@@ -17,12 +17,11 @@
 2. להתקין Tesseract עם עברית:
    - Windows: להתקין מ-UB-Mannheim/tesseract, ובהתקנה לסמן את השפה Hebrew. בנוסף להתקין את poppler ל-Windows ולהוסיף אותו ל-PATH.
    - Mac: `brew install tesseract tesseract-lang poppler`
-3. לפתוח טרמינל בתיקייה `docmind/backend` ולהריץ:
-   ```
-   pip install -r requirements.txt
-   python run.py
-   ```
+3. להפעיל:
+   - Windows: לחיצה כפולה על `start.bat`
+   - Mac: לפתוח טרמינל בתיקייה `docmind` ולהריץ `./start.sh`
 4. לפתוח בדפדפן את http://localhost:8000
+5. (רשות) לתמונות iPhone בפורמט HEIC: להתקין ImageMagick (חינם, imagemagick.org)
 
 ## שלב 2 — יצירת פרטי חיבור ל-Google (כ-10 דקות)
 1. להיכנס ל-console.cloud.google.com ← **New Project** ← לתת שם (למשל DocMind) ← Create.
@@ -45,6 +44,9 @@
 6. לעצור את השרת (Ctrl+C) ולהריץ שוב `python run.py`. הקובץ `.env` נטען אוטומטית.
 7. באפליקציה: **עוד ← מקורות מחוברים ← Gmail ← חיבור**. גוגל תציג אזהרה "האפליקציה לא אומתה", וזה תקין כשהאפליקציה שלך: Advanced ← Go to DocMind ← לאשר.
 8. לחזור על אותו הדבר עבור Google Drive.
+
+## תזכורות תוקף (בחינם)
+מסמך עם תאריך תוקף מופיע בדף הבית לפני שהוא פג. כפתור "הוספה ליומן" מוריד קובץ יומן שנפתח ב-Google Calendar, ביומן של iPhone וב-Outlook. בהגדרות בוחרים כמה זמן מראש להזכיר: 14, 30, 60 או 90 ימים.
 
 ## בדיקה
 לשאול את העוזר: "תמצא את טופס 106" או "תמצא את אישור הלימודים". מה שנמצא במייל יסומן "נמצא בחוץ — עדיין לא הורד", עם כפתור "פתיחת המייל" וכפתור "הורדה לספרייה".
