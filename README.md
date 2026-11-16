@@ -2,13 +2,14 @@
 
 [![Open in GitHub Codespaces](https://github.com/codespaces/badge.svg)](https://codespaces.new/yakov-ashgar27/DocMind)
 
-🌐 **Website:** https://yakov-ashgar27.github.io/DocMind/ · 📱 **Phone app:** https://yakov-ashgar27.github.io/DocMind/app/
+🌐 **Website:** https://yakov-ashgar27.github.io/DocMind/ · 🤖 **Android app (APK):** https://github.com/yakov-ashgar27/DocMind/releases/download/android-latest/DocMind.apk · 📱 **Web app (iPhone/any phone):** https://yakov-ashgar27.github.io/DocMind/app/
 
 ## Two editions
 
-| | 📱 **Phone edition** (`mobile/`) | 💻 **DocMind Server** (`backend/` + `frontend/`) |
+| | 📱 **Phone edition** (`mobile/`, Android app in `android/`) | 💻 **DocMind Server** (`backend/` + `frontend/`) |
 |---|---|---|
-| Install | Open the link, then "Install app" / "Add to Home Screen" | Your computer, Docker or Codespaces |
+| Install | Android: download the APK (built free by GitHub Actions). iPhone/any phone: open the link, then "Add to Home Screen" | Your computer, Docker or Codespaces |
+| Automatic phone scan (gallery, Downloads, WhatsApp folder), Share → DocMind | Android app ✅ | — |
 | Where documents live | Encrypted on the phone only (IndexedDB + WebCrypto) | Encrypted on your computer |
 | Hebrew OCR, assistant, memory, bundles, vault, reminders, WhatsApp import | ✅ | ✅ |
 | Gmail and Google Drive | — | ✅ |

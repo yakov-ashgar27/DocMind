@@ -58,7 +58,8 @@ code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:.92em;bac
 .ed-head h3{margin:6px 0 4px;font-size:22px}.ed-head p{margin:0;color:var(--ink2)}
 .btn.big{min-height:58px;font-size:18px;align-self:stretch}
 .grid.two{grid-template-columns:repeat(auto-fit,minmax(220px,1fr))}.grid.three{grid-template-columns:repeat(auto-fit,minmax(200px,1fr))}
-.edition h4{margin:0 0 4px;font-size:15px}
+.edition h4{margin:0 0 4px;font-size:16px}
+.track{display:flex;flex-direction:column;gap:10px;background:#f8f7f3;border-radius:16px;padding:16px}.meta-p{margin:0;color:var(--ink2);font-size:14.5px}
 .mini{display:flex;flex-direction:column;gap:8px;background:#f8f7f3;border-radius:14px;padding:14px}.mini p{margin:0;font-size:14px;color:var(--ink2)}
 .compare{background:var(--surface);border:1px solid var(--line);border-radius:22px;padding:18px;overflow-x:auto}
 .compare h3{margin:0 0 10px}.compare table{width:100%;border-collapse:collapse;font-size:15px}
@@ -83,7 +84,7 @@ footer{padding:30px 0 50px;color:var(--muted);font-size:14px;text-align:center}
   <p class="lead"><span data-l="he">עוזר מסמכים אישי בעברית ובאנגלית: מזהה תעודת זהות, צו מילואים, אישור לימודים ועוד, גם כששם הקובץ הוא <code>IMG_2026…</code>. זוכר מה נדרש לכל תהליך, ומכין תיק מסמכים להורדה.</span><span data-l="en">A Hebrew/English personal document assistant: recognises ID cards, reserve orders, enrollment proofs and more, even when the file is called <code>IMG_2026…</code>. It remembers what each process needs and prepares a bundle to download.</span></p>
   <div id="you" class="you"></div>
   <div class="cta">
-    <a class="btn primary" href="app/"><span data-l="he">📱 פתיחה והתקנה בטלפון</span><span data-l="en">📱 Open and install on your phone</span></a>
+    <a class="btn primary" href="#phone"><span data-l="he">📱 להתקנה בטלפון</span><span data-l="en">📱 Install on your phone</span></a>
     <a class="btn ghost" href="#get"><span data-l="he">כל האפשרויות</span><span data-l="en">All options</span></a>
     <a class="btn ghost" href="https://github.com/yakov-ashgar27/DocMind"><span data-l="he">הקוד ב-GitHub</span><span data-l="en">Code on GitHub</span></a>
   </div>
@@ -119,17 +120,26 @@ footer{padding:30px 0 50px;color:var(--muted);font-size:14px;text-align:center}
     <div class="ed-head"><span class="ed-icon">📱</span><div>
       <span class="tag" data-l="he">מומלץ לרוב האנשים</span><span class="tag" data-l="en">Recommended for most people</span>
       <h3 data-l="he">DocMind לטלפון</h3><h3 data-l="en">DocMind for your phone</h3>
-      <p data-l="he">אפליקציה שמותקנת מהדפדפן ב-Android וב-iPhone. בלי הרשמה, בלי שרת, בחינם. המסמכים נשמרים <b>מוצפנים רק בטלפון שלך</b>, וזיהוי הטקסט בעברית רץ בטלפון עצמו.</p>
-      <p data-l="en">An app you install from the browser on Android and iPhone. No sign-up, no server, free. Your documents are stored <b>encrypted on your phone only</b>, and Hebrew text recognition runs on the phone itself.</p>
+      <p data-l="he">בלי הרשמה, בלי שרת, בחינם. המסמכים נשמרים <b>מוצפנים רק בטלפון שלך</b>, וזיהוי הטקסט בעברית רץ בטלפון עצמו.</p>
+      <p data-l="en">No sign-up, no server, free. Your documents are stored <b>encrypted on your phone only</b>, and Hebrew text recognition runs on the phone itself.</p>
     </div></div>
-    <a class="btn primary big" href="app/"><span data-l="he">פתיחה והתקנה</span><span data-l="en">Open and install</span></a>
     <div class="grid two">
-      <div><h4 data-l="he">התקנה ב-Android</h4><h4 data-l="en">Install on Android</h4>
-        <ol class="steps" data-l="he"><li>ללחוץ "פתיחה והתקנה" ב-Chrome.</li><li>תפריט ⋮ ← <b>התקנת אפליקציה</b>.</li><li>לבחור קוד גישה — וזהו.</li></ol>
-        <ol class="steps" data-l="en"><li>Tap "Open and install" in Chrome.</li><li>Menu ⋮ → <b>Install app</b>.</li><li>Choose a passcode — done.</li></ol></div>
-      <div><h4 data-l="he">התקנה ב-iPhone</h4><h4 data-l="en">Install on iPhone</h4>
+      <div class="track">
+        <h4>🤖 Android — <span data-l="he">אפליקציה להורדה (מומלץ)</span><span data-l="en">downloadable app (recommended)</span></h4>
+        <p class="meta-p" data-l="he">סורקת בעצמה את הגלריה, ההורדות ותיקיית וואטסאפ, ומופיעה בתפריט "שיתוף" של כל אפליקציה (וואטסאפ, Gmail). זיהוי הטקסט בעברית עובד גם בלי אינטרנט.</p>
+        <p class="meta-p" data-l="en">Scans your gallery, Downloads and WhatsApp folder by itself and appears in every app's Share menu (WhatsApp, Gmail). Hebrew text recognition works offline.</p>
+        <a class="btn primary big" href="https://github.com/yakov-ashgar27/DocMind/releases/download/android-latest/DocMind.apk"><span data-l="he">הורדת האפליקציה לאנדרואיד</span><span data-l="en">Download the Android app</span></a>
+        <ol class="steps" data-l="he"><li>ללחוץ על ההורדה ולפתוח את הקובץ <b>DocMind.apk</b>.</li><li>אם מופיעה בקשה: לאשר "התקנה מהמקור הזה" לדפדפן.</li><li>אם Play Protect מזהיר על מפתח לא מוכר: "פרטים נוספים" ← <b>להתקין בכל זאת</b> (האפליקציה בקוד פתוח, ונבנית אוטומטית מהקוד שבעמוד הזה).</li><li>לפתוח, לבחור קוד גישה וללחוץ "סריקת הטלפון".</li></ol>
+        <ol class="steps" data-l="en"><li>Download and open <b>DocMind.apk</b>.</li><li>If asked, allow "Install from this source" for your browser.</li><li>If Play Protect warns about an unknown developer: "More details" → <b>Install anyway</b> (the app is open source and built automatically from this project's code).</li><li>Open it, choose a passcode, tap "Scan my phone".</li></ol>
+      </div>
+      <div class="track">
+        <h4>🍎 iPhone <span data-l="he">(וגם כל טלפון אחר) — מהדפדפן</span><span data-l="en">(and any other phone) — from the browser</span></h4>
+        <p class="meta-p" data-l="he">אותה אפליקציה, מותקנת מהדפדפן. מוסיפים מסמכים מהגלריה או מהקבצים (אפל לא מאפשרת סריקה אוטומטית).</p>
+        <p class="meta-p" data-l="en">The same app, installed from the browser. Add documents from Photos or Files (Apple doesn't allow automatic scanning).</p>
+        <a class="btn ghost big" href="app/"><span data-l="he">פתיחה והתקנה מהדפדפן</span><span data-l="en">Open and install from the browser</span></a>
         <ol class="steps" data-l="he"><li>לפתוח את הקישור ב-<b>Safari</b>.</li><li>כפתור השיתוף ← <b>הוסף למסך הבית</b>.</li><li>לפתוח מהאייקון ולבחור קוד גישה.</li></ol>
-        <ol class="steps" data-l="en"><li>Open the link in <b>Safari</b>.</li><li>Share button → <b>Add to Home Screen</b>.</li><li>Open from the icon and choose a passcode.</li></ol></div>
+        <ol class="steps" data-l="en"><li>Open the link in <b>Safari</b>.</li><li>Share button → <b>Add to Home Screen</b>.</li><li>Open from the icon and choose a passcode.</li></ol>
+      </div>
     </div>
     <p class="note" data-l="he">המסמכים נמצאים רק בטלפון. כדאי ליצור מדי פעם קובץ גיבוי מוצפן (הגדרות ← גיבוי) ולשמור אותו בדרייב או במייל. זיהוי טקסט מתמונות מוריד מנוע פעם אחת (צריך אינטרנט בפעם הראשונה).</p>
     <p class="note" data-l="en">Documents live only on the phone. Create an encrypted backup now and then (Settings → Backup) and keep it in Drive or email. Photo text recognition downloads an engine once (internet needed the first time).</p>
@@ -159,7 +169,8 @@ footer{padding:30px 0 50px;color:var(--muted);font-size:14px;text-align:center}
     <table>
       <thead><tr><th></th><th>📱 <span data-l="he">טלפון</span><span data-l="en">Phone</span></th><th>💻 Server</th></tr></thead>
       <tbody>
-        <tr><td data-l="he">התקנה</td><td data-l="en">Setup</td><td data-l="he">לחיצה אחת</td><td data-l="en">One tap</td><td data-l="he">מחשב / ענן</td><td data-l="en">Computer / cloud</td></tr>
+        <tr><td data-l="he">סריקה אוטומטית של הטלפון</td><td data-l="en">Automatic phone scan</td><td data-l="he">באפליקציית אנדרואיד</td><td data-l="en">Android app</td><td>—</td></tr>
+        <tr><td data-l="he">התקנה</td><td data-l="en">Setup</td><td data-l="he">הורדה / לחיצה אחת</td><td data-l="en">Download / one tap</td><td data-l="he">מחשב / ענן</td><td data-l="en">Computer / cloud</td></tr>
         <tr><td data-l="he">איפה המסמכים</td><td data-l="en">Where documents live</td><td data-l="he">רק בטלפון</td><td data-l="en">Only on the phone</td><td data-l="he">במחשב שלך</td><td data-l="en">On your computer</td></tr>
         <tr><td data-l="he">זיהוי טקסט בעברית, עוזר, זיכרון, תיקים</td><td data-l="en">Hebrew OCR, assistant, memory, bundles</td><td>✓</td><td>✓</td></tr>
         <tr><td data-l="he">כספת מוצפנת, תזכורות, ייבוא וואטסאפ</td><td data-l="en">Encrypted vault, reminders, WhatsApp import</td><td>✓</td><td>✓</td></tr>

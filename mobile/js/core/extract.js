@@ -75,10 +75,17 @@ async function ocrWorker() {
       const { info, isNative } = await import("../native.js");
       if (isNative && info().bundledOcr) {
         // Android app: the OCR engine and Hebrew/English language data ship inside the APK (works offline).
-        const base = new URL("../../vendor/tesseract/", import.meta.url).href;
-        await loadScript(base + "tesseract.min.js");
-        return window.Tesseract.createWorker(["heb", "eng"], 1, { workerPath: base + "worker.min.js", corePath: base + "core",
-          langPath: base + "lang", logger: (m) => ocrProgress(m) });
+        // If this WebView can't load them from inside a worker, fall back to the one-time CDN download.
+        try {
+          const base = new URL("../../vendor/tesseract/", import.meta.url).href;
+          await loadScript(base + "tesseract.min.js");
+          const w = await Promise.race([
+            window.Tesseract.createWorker(["heb", "eng"], 1, { workerPath: base + "worker.min.js", corePath: base + "core",
+              langPath: base + "lang", logger: (m) => ocrProgress(m) }),
+            new Promise((_, rej) => setTimeout(() => rej(new Error("bundled_ocr_timeout")), 60000)),
+          ]);
+          return w;
+        } catch (e) { console.warn("bundled OCR unavailable, using CDN", e); }
       }
       await loadScript(TESSERACT_URL);
       return window.Tesseract.createWorker(["heb", "eng"], 1, { logger: (m) => ocrProgress(m) });
