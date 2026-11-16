@@ -17,33 +17,50 @@ jobs:
       - uses: actions/setup-java@v4
         with: { distribution: temurin, java-version: "17" }
       - uses: android-actions/setup-android@v3
+        id: sdk
       - uses: gradle/actions/setup-gradle@v4
         with: { gradle-version: "8.10.2" }
       - name: Bundle Hebrew+English OCR engine (offline OCR inside the app)
+        id: ocr
+        continue-on-error: true
         run: |
-          set -e
-          T=mobile/vendor/tesseract; mkdir -p $T/core $T/lang /tmp/ocr && cd /tmp/ocr
-          npm pack tesseract.js@5.1.1 tesseract.js-core@5.1.1 >/dev/null
-          mkdir js core && tar xzf tesseract.js-5.1.1.tgz -C js && tar xzf tesseract.js-core-5.1.1.tgz -C core
-          cd "$GITHUB_WORKSPACE"
-          cp /tmp/ocr/js/package/dist/tesseract.min.js /tmp/ocr/js/package/dist/worker.min.js $T/
-          cp /tmp/ocr/core/package/*.wasm.js /tmp/ocr/core/package/*.wasm $T/core/ 2>/dev/null || cp /tmp/ocr/core/package/tesseract-core* $T/core/
-          for l in heb eng; do curl -fsSL -o $T/lang/$l.traineddata.gz "https://cdn.jsdelivr.net/npm/@tesseract.js-data/$l/4.0.0_best_int/$l.traineddata.gz"; done
-          ls -la $T $T/core $T/lang
+          exec > >(tee -a /tmp/build.log) 2>&1
+          echo "== OCR bundle"; set -x
+          T="$GITHUB_WORKSPACE/mobile/vendor/tesseract"; mkdir -p "$T/core" "$T/lang" /tmp/ocr && cd /tmp/ocr
+          npm pack tesseract.js@5.1.1 tesseract.js-core@5.1.1
+          mkdir -p js core && tar xzf tesseract.js-5.1.1.tgz -C js && tar xzf tesseract.js-core-5.1.1.tgz -C core
+          cp js/package/dist/tesseract.min.js js/package/dist/worker.min.js "$T/"
+          cp core/package/tesseract-core*.js core/package/tesseract-core*.wasm "$T/core/" || true
+          for l in heb eng; do
+            ok=""
+            for u in "https://cdn.jsdelivr.net/npm/@tesseract.js-data/$l/4.0.0_best_int/$l.traineddata.gz" \
+                     "https://tessdata.projectnaptha.com/4.0.0_best/$l.traineddata.gz" \
+                     "https://tessdata.projectnaptha.com/4.0.0/$l.traineddata.gz"; do
+              if curl -fsSL -o "$T/lang/$l.traineddata.gz" "$u"; then ok=1; echo "got $l from $u"; break; fi
+            done
+            [ -n "$ok" ] || { echo "could not download $l"; exit 1; }
+          done
+          ls -la "$T" "$T/core" "$T/lang"
+      - name: Drop partial OCR bundle (app then downloads OCR once instead)
+        if: steps.ocr.outcome != 'success'
+        run: rm -rf mobile/vendor/tesseract && echo "OCR bundle skipped" | tee -a /tmp/build.log
       - name: Signing key
         env:
           KEYSTORE_B64: ${{ secrets.DOCMIND_KEYSTORE_B64 }}
         run: |
           if [ -n "$KEYSTORE_B64" ]; then echo "$KEYSTORE_B64" | base64 -d > /tmp/release.keystore; echo "DOCMIND_KEYSTORE=/tmp/release.keystore" >> $GITHUB_ENV; fi
       - name: Build APK
+        id: build
         env:
           DOCMIND_KEYSTORE_PASSWORD: ${{ secrets.DOCMIND_KEYSTORE_PASSWORD }}
           DOCMIND_KEY_PASSWORD: ${{ secrets.DOCMIND_KEY_PASSWORD }}
           DOCMIND_KEY_ALIAS: ${{ secrets.DOCMIND_KEY_ALIAS }}
         run: |
           set -o pipefail
+          exec > >(tee -a /tmp/build.log) 2>&1
+          echo "== Gradle build"
           for v in DOCMIND_KEYSTORE_PASSWORD DOCMIND_KEY_PASSWORD DOCMIND_KEY_ALIAS; do [ -z "${!v}" ] && unset $v; done
-          gradle -p android assembleRelease --no-daemon --stacktrace 2>&1 | tee /tmp/build.log
+          gradle -p android assembleRelease --no-daemon --stacktrace
           cp android/app/build/outputs/apk/release/app-release.apk DocMind.apk
           ls -la DocMind.apk
       - name: Publish download (GitHub release "android-latest")
@@ -56,8 +73,8 @@ jobs:
       - name: Save build log for the maintainers
         if: always()
         run: |
-          mkdir -p /tmp/logs && cp /tmp/build.log /tmp/logs/build.log 2>/dev/null || echo "no gradle log (failed before build)" > /tmp/logs/build.log
-          echo "run ${{ github.run_number }} ${{ job.status }} ${{ github.sha }}" > /tmp/logs/STATUS
+          mkdir -p /tmp/logs && cp /tmp/build.log /tmp/logs/build.log 2>/dev/null || echo "no log captured" > /tmp/logs/build.log
+          echo "run ${{ github.run_number }} ${{ job.status }} ${{ github.sha }} ocr=${{ steps.ocr.outcome }} build=${{ steps.build.outcome }} sdk=${{ steps.sdk.outcome }}" > /tmp/logs/STATUS
           cd /tmp/logs && git init -q && git checkout -q -b build-logs
           git config user.name "docmind-ci" && git config user.email "docmind-ci@users.noreply.github.com"
           git add -A && git commit -qm "build ${{ github.run_number }}: ${{ job.status }}"
