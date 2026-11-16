@@ -111,3 +111,18 @@ def test_delete_requires_confirmation(library, ctx):
     assert library.delete(f"/api/documents/{doc['id']}", json={}).status_code == 400
     assert library.delete(f"/api/documents/{doc['id']}", json={"confirm": True}).status_code == 200
     assert library.get(f"/api/documents/{doc['id']}").status_code == 404
+
+
+def test_heif_container_photo_is_ocrd_and_classified(session):
+    # AVIF uses the same HEIF container + libheif decode path as iPhone HEIC photos.
+    doc = session.upload("IMG_4821.avif")[0]
+    d = session.get(f"/api/documents/{doc['id']}").json["document"]
+    assert d["mime_type"] == "image/avif" and d["status"] == "ready", d["error"]
+    assert d["doc_type"] == "bank_confirmation" and d["ocr_used"]
+    assert session.get(f"/api/documents/{doc['id']}/thumbnail").status_code == 200
+
+
+def test_heic_brand_sniffing():
+    from docmind.services.extract import sniff_mime
+    assert sniff_mime(b"\x00\x00\x00\x18ftypheic\x00\x00\x00\x00", "x.heic") == "image/heic"
+    assert sniff_mime(b"\x00\x00\x00\x18ftypmif1\x00\x00\x00\x00", "x.heic") == "image/heic"

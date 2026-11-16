@@ -168,7 +168,7 @@ def item_file(ctx, user, bid, item_id) -> tuple[bytes, str, str]:
 
 def combined_pdf(ctx, user, bid) -> tuple[bytes, str]:
     """Optional: merge selected items into one PDF (images become pages). Only on explicit request."""
-    from PIL import Image, ImageOps
+    from PIL import ImageOps
     from pypdf import PdfReader, PdfWriter
     b = get_row(ctx, user, bid)
     writer = PdfWriter()
@@ -183,8 +183,9 @@ def combined_pdf(ctx, user, bid) -> tuple[bytes, str]:
             for page in PdfReader(io.BytesIO(data)).pages:
                 writer.add_page(page)
             added += 1
-        elif doc["mime_type"].startswith("image/") and doc["mime_type"] != "image/heic":
-            img = ImageOps.exif_transpose(Image.open(io.BytesIO(data))).convert("RGB")
+        elif doc["mime_type"].startswith("image/"):
+            from .extract import open_image
+            img = ImageOps.exif_transpose(open_image(data, doc["mime_type"])).convert("RGB")
             buf = io.BytesIO()
             img.save(buf, "PDF", resolution=150)
             for page in PdfReader(io.BytesIO(buf.getvalue())).pages:

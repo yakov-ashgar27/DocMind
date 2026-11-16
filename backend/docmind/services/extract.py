@@ -21,6 +21,7 @@ SUPPORTED_MIME = {
     "image/png": ".png",
     "image/webp": ".webp",
     "image/heic": ".heic",
+    "image/avif": ".avif",
     "image/tiff": ".tiff",
     "text/plain": ".txt",
 }
@@ -44,8 +45,12 @@ def sniff_mime(data: bytes, filename: str) -> str | None:
         return "image/png"
     if data[:4] == b"RIFF" and data[8:12] == b"WEBP":
         return "image/webp"
-    if data[4:12] in (b"ftypheic", b"ftypheix", b"ftypmif1", b"ftypheim"):
-        return "image/heic"
+    if data[4:8] == b"ftyp":
+        brand = data[8:12]
+        if brand in (b"avif", b"avis"):
+            return "image/avif"
+        if brand in (b"heic", b"heix", b"heim", b"heis", b"hevc", b"hevx", b"mif1", b"msf1"):
+            return "image/heic"
     if data[:4] in (b"II*\x00", b"MM\x00*"):
         return "image/tiff"
     if filename.lower().endswith(".txt"):
@@ -55,6 +60,37 @@ def sniff_mime(data: bytes, filename: str) -> str | None:
         except UnicodeDecodeError:
             return None
     return None
+
+
+HEIF_MIME = ("image/heic", "image/avif")
+
+
+def heif_to_jpeg(data: bytes, mime: str) -> bytes:
+    """iPhone HEIC / AVIF -> JPEG for OCR, thumbnails and combined PDFs. The original file is kept.
+    Uses pillow-heif when installed, otherwise ImageMagick (libheif), both free and local."""
+    try:
+        import pillow_heif  # type: ignore
+        pillow_heif.register_heif_opener()
+        from PIL import Image
+        with Image.open(io.BytesIO(data)) as img:
+            out = io.BytesIO()
+            img.convert("RGB").save(out, "JPEG", quality=92)
+            return out.getvalue()
+    except ImportError:
+        pass
+    coder = "avif" if mime == "image/avif" else "heic"
+    r = subprocess.run(["convert", "-limit", "memory", "512MiB", "-limit", "time", "60", f"{coder}:-",
+                        "-auto-orient", "jpg:-"], input=data, capture_output=True, timeout=90)
+    if r.returncode != 0 or not r.stdout:
+        raise ValueError("heic_decode_failed")
+    return r.stdout
+
+
+def open_image(data: bytes, mime: str):
+    from PIL import Image
+    if mime in HEIF_MIME:
+        data = heif_to_jpeg(data, mime)
+    return Image.open(io.BytesIO(data))
 
 
 def detect_language(text: str) -> str | None:
@@ -97,10 +133,7 @@ def extract_text(data: bytes, mime: str, langs: str = "heb+eng", max_pdf_pages: 
         t = data.decode("utf-8", errors="replace")
         return Extraction(t, False, 1, detect_language(t))
     if mime.startswith("image/"):
-        from PIL import Image
-        if mime == "image/heic":
-            raise ValueError("heic_not_supported_yet")
-        with Image.open(io.BytesIO(data)) as img:
+        with open_image(data, mime) as img:
             text = _ocr_image(img, langs)
         return Extraction(_clean(text), True, 1, detect_language(text))
     if mime == "application/pdf":
@@ -162,9 +195,8 @@ def make_thumbnail(data: bytes, mime: str) -> bytes | None:
     """Small JPEG preview (first page for PDFs)."""
     from PIL import Image, ImageOps
     try:
-        if mime.startswith("image/") and mime != "image/heic":
-            img = Image.open(io.BytesIO(data))
-            img = ImageOps.exif_transpose(img)
+        if mime.startswith("image/"):
+            img = ImageOps.exif_transpose(open_image(data, mime))
         elif mime == "application/pdf":
             with tempfile.TemporaryDirectory() as tmp:
                 src = Path(tmp) / "in.pdf"

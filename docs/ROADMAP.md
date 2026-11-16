@@ -21,6 +21,6 @@ Authentication, upload, encrypted library, OCR (he+en), classification, natural-
 ## Known limitations (honest list)
 - The assistant's local engine understands requests through a curated bilingual lexicon of 24 document types and 8 processes, plus free-form "documents for X" tasks. Unusual phrasings fall back to content search. The optional LLM provider covers more phrasings without sending documents.
 - Classification and freshness rules are heuristic. They have been tested on fictional sample documents, not yet on a corpus of real ones. Confidence is shown, and users can correct the type; corrections improve future classification.
-- HEIC photos are rejected for now (needs `pillow-heif`).
+- HEIC/AVIF photos are decoded with ImageMagick (libheif); installing `pillow-heif` is optional and faster.
 - PDF preview uses the browser's built-in viewer.
 - Single-process deployment (in-memory rate limiting and job queue).

@@ -73,7 +73,7 @@ export async function downloadDoc(doc) {
 }
 
 export function uploadButtons(onDone, { compact = false, waOnly = false } = {}) {
-  const input = h("input", { type: "file", multiple: true, accept: "application/pdf,image/*,.txt", class: "visually-hidden",
+  const input = h("input", { type: "file", multiple: true, accept: "application/pdf,image/*,.heic,.heif,.avif,.txt", class: "visually-hidden",
     onchange: async () => {
       if (!input.files.length) return;
       const fd = new FormData();
