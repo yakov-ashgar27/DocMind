@@ -34,7 +34,13 @@ export async function accountsView(root, params, query) {
         catch (e) { toast(errText(e.code), "bad"); }
       } }, t("connect"));
     } else if (["gmail", "gdrive"].includes(c.key) && c.state === "connected") {
-      action = h("button", { class: "btn ghost sm", onclick: async () => { await api(`/connectors/${c.key}`, { method: "DELETE" }); navigate("/accounts"); } }, t("disconnect"));
+      action = h("div", { class: "col tight" },
+        h("button", { class: "btn primary sm", onclick: async (e) => {
+          e.currentTarget.disabled = true;
+          try { const r = await api(`/connectors/${c.key}/sync`, { method: "POST" }); toast(t("synced", { n: r.indexed }), "ok"); navigate("/accounts?r=" + Date.now()); }
+          catch (err) { toast(errText(err.code), "bad"); e.currentTarget.disabled = false; }
+        } }, t("sync_now")),
+        h("button", { class: "btn ghost sm", onclick: async () => { await api(`/connectors/${c.key}`, { method: "DELETE" }); navigate("/accounts?r=" + Date.now()); } }, t("disconnect")));
     } else if (c.key === "whatsapp") {
       action = uploadButtons(() => navigate("/accounts"), { waOnly: true });
     }
@@ -45,7 +51,7 @@ export async function accountsView(root, params, query) {
         h("div", { class: "doc-title" }, L(c.label), c.account ? h("span", { class: "muted" }, ` · ${c.account}`) : null),
         h("div", { class: "row tight" }, h("span", { class: `badge ${STATE_KIND[c.state] || ""}` }, t("s_" + c.state)),
           c.documents !== undefined ? h("span", { class: "meta" }, `${c.documents} ${t("items")}`) : null,
-          c.stage > 1 ? h("span", { class: "meta muted" }, `Stage ${c.stage}`) : null),
+          c.last_synced_at ? h("span", { class: "meta muted" }, t("last_synced", { d: fmtDate(c.last_synced_at) })) : null),
         explain ? h("p", { class: "meta muted" }, explain) : null),
       action));
   }

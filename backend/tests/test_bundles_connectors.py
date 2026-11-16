@@ -89,7 +89,15 @@ def gmail(library, ctx, monkeypatch):
         calls.append((url, params))
         assert headers["Authorization"] == "Bearer at"
         if url.endswith("/messages"):
+            if "newer_than:5y" in params["q"]:  # background index walk, two pages
+                return FakeResp({"messages": [{"id": "m1"}], "nextPageToken": "p2"} if "pageToken" not in params
+                                else {"messages": [{"id": "m2"}]})
             return FakeResp({"messages": [{"id": "m1"}]})
+        if url.endswith("/messages/m2"):
+            return FakeResp({"id": "m2", "snippet": "",
+                             "payload": {"headers": [{"name": "Subject", "value": "אישור ניהול חשבון"}],
+                                         "parts": [{"filename": "ishur.pdf", "mimeType": "application/pdf",
+                                                    "body": {"attachmentId": "att2", "size": 1234}}]}})
         if url.endswith("/messages/m1"):
             return FakeResp({"id": "m1", "snippet": "your 106 form attached",
                              "payload": {"headers": [{"name": "Subject", "value": "טופס 106 לשנת 2025"},
@@ -153,3 +161,19 @@ def test_shared_learning_off_by_default_and_k_anonymous(ctx, client):
     ctx.db.execute("UPDATE shared_patterns SET contributors = 25")
     assert shared_learning.suggestions(ctx, "reserve_scholarship") == ["passport"]
     assert "sl@example.com" not in json.dumps(ctx.db.all("SELECT * FROM shared_contributions"))
+
+
+def test_background_index_finds_without_live_query(library, gmail, ctx, monkeypatch):
+    r = library.post("/api/connectors/gmail/sync").json
+    assert r["indexed"] == 2
+    rows = ctx.db.all("SELECT doc_type, meta_enc FROM external_refs ORDER BY ref")
+    assert [x["doc_type"] for x in rows] == ["tax_form_106", "bank_confirmation"]
+    assert b"106" not in rows[0]["meta_enc"]  # metadata encrypted at rest
+    # Live search returns nothing now; the index still answers.
+    monkeypatch.setattr(google.GmailConnector, "search_remote", lambda *a, **k: [])
+    res = library.say("I need my form 106", new=True)
+    block = [b for b in res["blocks"] if b["type"] == "requirements"][0]
+    assert block["results"][0]["status"] == "found_external_not_downloaded"
+    assert block["results"][0]["best"]["external"]["indexed"] is True
+    library.delete("/api/connectors/gmail")
+    assert ctx.db.one("SELECT COUNT(*) n FROM external_refs")["n"] == 0

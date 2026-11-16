@@ -124,6 +124,7 @@ def disconnect(ctx, user, dek, kind: str) -> None:
     except Exception:
         pass  # local deletion below still removes our copy of the credentials
     ctx.db.execute("DELETE FROM connected_sources WHERE id = ?", (row["id"],))
+    ctx.db.execute("DELETE FROM external_refs WHERE user_id = ? AND kind = ?", (user["id"], kind))
     audit(ctx, user["id"], "connector.disconnect", kind)
 
 
@@ -202,12 +203,12 @@ class _GoogleConnector(LibraryConnector):
             return hits
         refs = {r["source_ref"] for r in ctx.db.all(
             "SELECT source_ref FROM documents WHERE user_id = ? AND source_kind = ?", (user["id"], self.kind))}
-        for ext in self.search_remote(ctx, user, dek, doc_type, query):
-            if ext["ref"] in refs:
+        seen = set(refs)
+        for ext in indexed_refs(ctx, user, dek, self.kind, doc_type) + self.search_remote(ctx, user, dek, doc_type, query):
+            if ext["ref"] in seen:
                 continue
+            seen.add(ext["ref"])
             hits.append(Hit(self.key, "found_external_not_downloaded", ext.pop("score"), "external", external=ext))
-        ctx.db.execute("UPDATE connected_sources SET last_synced_at = ? WHERE user_id = ? AND kind = ?",
-                       (now_iso(), user["id"], self.kind))
         return hits
 
 
@@ -300,3 +301,89 @@ def import_external(ctx, user, dek, kind: str, ref: str) -> dict:
         ctx.db.update("documents", doc["id"], {"source_url": f"https://mail.google.com/mail/u/0/#all/{ref.split(':')[0]}"})
     audit(ctx, user["id"], "connector.import", doc["id"], kind=kind)
     return ctx.db.one("SELECT * FROM documents WHERE id = ?", (doc["id"],))
+
+
+# ---- background index (metadata only) -----------------------------------------------------------
+INDEX_MAX_ITEMS = 300
+
+
+def _guess(text: str) -> tuple[str, float]:
+    scores = classifier.score_types(text, text)
+    if not scores:
+        return "unknown", 0.0
+    dt, sc = max(scores.items(), key=lambda kv: kv[1])
+    return (dt, min(0.95, 0.25 + sc / 12)) if sc >= 3 else ("unknown", 0.0)
+
+
+def _store_ref(ctx, user, dek, kind, ref, meta, text):
+    dt, score = _guess(text)
+    blob = crypto.encrypt_text(dek, json.dumps(meta, ensure_ascii=False), f"extref:{user['id']}:{kind}:{ref}")
+    ctx.db.execute(
+        "INSERT INTO external_refs (id, user_id, kind, ref, doc_type, type_score, meta_enc, indexed_at) VALUES (?,?,?,?,?,?,?,?) "
+        "ON CONFLICT(user_id, kind, ref) DO UPDATE SET doc_type = excluded.doc_type, type_score = excluded.type_score, "
+        "meta_enc = excluded.meta_enc, indexed_at = excluded.indexed_at",
+        (new_id(), user["id"], kind, ref, dt, score, blob, now_iso()))
+
+
+def sync_index(ctx, user, dek, kind: str) -> dict:
+    """Walk recent attachments / files and remember where each document lives (no downloads)."""
+    n = 0
+    if kind == "gmail":
+        token = None
+        while n < INDEX_MAX_ITEMS:
+            params = {"q": "has:attachment newer_than:5y (filename:pdf OR filename:jpg OR filename:jpeg OR filename:png OR filename:heic)",
+                      "maxResults": 100}
+            if token:
+                params["pageToken"] = token
+            page = _get(ctx, user, dek, "gmail", f"{GMAIL}/messages", **params).json()
+            for m in page.get("messages", []):
+                full = _get(ctx, user, dek, "gmail", f"{GMAIL}/messages/{m['id']}", format="full").json()
+                headers = {h["name"].lower(): h["value"] for h in full.get("payload", {}).get("headers", [])}
+                for part in _walk_parts(full.get("payload", {})):
+                    fn, att = part.get("filename"), part.get("body", {}).get("attachmentId")
+                    if not fn or not att or not fn.lower().endswith((".pdf", ".jpg", ".jpeg", ".png", ".heic")):
+                        continue
+                    meta = {"filename": fn, "subject": headers.get("subject", ""), "from": headers.get("from"),
+                            "date": headers.get("date"), "size": part.get("body", {}).get("size"),
+                            "message_id": m["id"], "attachment_id": att,
+                            "open_url": f"https://mail.google.com/mail/u/0/#all/{m['id']}"}
+                    _store_ref(ctx, user, dek, "gmail", f"{m['id']}:{att}", meta,
+                               f"{meta['subject']} {full.get('snippet', '')} {fn}")
+                    n += 1
+            token = page.get("nextPageToken")
+            if not token:
+                break
+    elif kind == "gdrive":
+        token = None
+        while n < INDEX_MAX_ITEMS:
+            params = {"q": "(mimeType = 'application/pdf' or mimeType contains 'image/') and trashed = false",
+                      "pageSize": 100, "fields": "nextPageToken,files(id,name,mimeType,modifiedTime,webViewLink,size)"}
+            if token:
+                params["pageToken"] = token
+            page = _get(ctx, user, dek, "gdrive", f"{DRIVE}/files", **params).json()
+            for f in page.get("files", []):
+                meta = {"filename": f["name"], "mime_type": f.get("mimeType"), "date": f.get("modifiedTime"),
+                        "size": f.get("size"), "file_id": f["id"], "open_url": f.get("webViewLink")}
+                _store_ref(ctx, user, dek, "gdrive", f["id"], meta, f["name"])
+                n += 1
+            token = page.get("nextPageToken")
+            if not token:
+                break
+    else:
+        raise ConnectorError("unknown_connector", 404)
+    ctx.db.execute("UPDATE connected_sources SET last_synced_at = ? WHERE user_id = ? AND kind = ?",
+                   (now_iso(), user["id"], kind))
+    audit(ctx, user["id"], "connector.sync", kind, items=n)
+    return {"indexed": n}
+
+
+def indexed_refs(ctx, user, dek, kind: str, doc_type: str | None) -> list[dict]:
+    if not doc_type or doc_type == "unknown":
+        return []
+    rows = ctx.db.all("SELECT * FROM external_refs WHERE user_id = ? AND kind = ? AND doc_type = ? "
+                      "ORDER BY type_score DESC LIMIT 8", (user["id"], kind, doc_type))
+    out = []
+    for r in rows:
+        meta = json.loads(crypto.decrypt_text(dek, r["meta_enc"], f"extref:{user['id']}:{kind}:{r['ref']}"))
+        out.append({"kind": kind, "ref": r["ref"], **meta, "score": r["type_score"], "indexed": True})
+    return out

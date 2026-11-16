@@ -25,10 +25,31 @@ def oauth_callback():
     if request.args.get("error"):
         return redirect("/#/accounts?error=" + request.args["error"][:40])
     try:
-        _, kind = google.finish_oauth(ctx(), request.args.get("code", ""), request.args.get("state", ""))
+        uid, kind = google.finish_oauth(ctx(), request.args.get("code", ""), request.args.get("state", ""))
     except google.ConnectorError as e:
         return redirect("/#/accounts?error=" + e.code)
+    _sync_in_background(uid, kind)
     return redirect(f"/#/accounts?connected={kind}")
+
+
+def _sync_in_background(user_id, kind):
+    c = ctx()
+
+    def job():
+        from ..security.auth import user_dek
+        user = c.db.one("SELECT * FROM users WHERE id = ?", (user_id,))
+        if user:
+            try:
+                google.sync_index(c, user, user_dek(c, user), kind)
+            except google.ConnectorError:
+                pass
+    c.executor.submit(job)
+
+
+@api.post("/connectors/<kind>/sync")
+@require_auth
+def sync(kind):
+    return jsonify(google.sync_index(ctx(), g.user, g.dek, kind))
 
 
 @api.delete("/connectors/<kind>")
