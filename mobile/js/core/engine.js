@@ -187,18 +187,17 @@ function suggestedFor(pk, exclude = []) {
   return (PROCESSES[pk]?.suggested || []).filter((d) => !exclude.includes(d));
 }
 
-async function suggestionBlock(types, lang) {
+async function suggestionBlock(types, lang, mode = "add") {
   const have = new Set([...(await repo.docs()).values()].filter((d) => !d.archived).map((d) => d.doc_type));
-  return { type: "suggestions", note: t("suggestions_note", lang), items: types.map((d) => ({ doc_type: d, label: label(d, lang), in_library: have.has(d) })) };
+  return { type: "suggestions", mode, note: t("suggestions_note", lang), items: types.map((d) => ({ doc_type: d, label: label(d, lang), in_library: have.has(d) })) };
 }
 
 async function askChecklist(conv, task, lang, again = false) {
   const suggested = suggestedFor(task.purpose_key);
   task.suggested = suggested;
   conv.state = { awaiting_checklist: task };
-  const blocks = suggested.length ? [await suggestionBlock(suggested, lang)] : [];
-  let quick = suggested.length ? [{ label: t("use_suggestions", lang), send: lang === "he" ? "כן" : "yes" }] : [];
-  quick = quick.concat(suggested.slice(0, 5).map((d) => ({ label: label(d, lang), send: label(d, lang) })));
+  const blocks = suggested.length ? [await suggestionBlock(suggested, lang, "checklist")] : [];
+  const quick = suggested.length ? [{ label: t("use_suggestions", lang), send: lang === "he" ? "כן" : "yes" }] : [];
   return { text: t(again ? "ask_checklist_again" : "ask_checklist", lang, { task: task.label }), blocks, quick_replies: quick };
 }
 

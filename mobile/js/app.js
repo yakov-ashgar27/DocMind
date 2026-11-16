@@ -138,6 +138,29 @@ async function enter() {
   onRender(renderRoute);
   if (!location.hash || location.hash === "#/") navigate("/home"); else renderRoute();
   armAutoLock();
+  importSharedFiles();
+}
+
+// Files shared to DocMind from other apps (Android share sheet) wait in the inbox until unlock.
+async function importSharedFiles() {
+  if (!("caches" in window)) return;
+  const inbox = await caches.open("docmind-share-inbox");
+  const keys = await inbox.keys();
+  if (!keys.length) return;
+  let n = 0;
+  for (const req of keys) {
+    const res = await inbox.match(req);
+    const name = decodeURIComponent(res.headers.get("x-name") || "document");
+    const blob = await res.blob();
+    try {
+      const fd = new FormData();
+      if (/\.zip$/i.test(name) || blob.type === "application/zip") { fd.append("file", new File([blob], name)); await api("/import/whatsapp", { method: "POST", form: fd }); }
+      else { fd.append("files", new File([blob], name, { type: blob.type })); await api("/documents", { method: "POST", form: fd }); }
+      n++;
+    } catch (e) { toast(`${name}: ${errText(e.code)}`, "bad"); }
+    await inbox.delete(req);
+  }
+  if (n) { toast(t("files_added", { n }), "ok"); navigate("/library"); }
 }
 
 // Auto-lock: after N minutes in the background (default 2) or of inactivity (default 10).

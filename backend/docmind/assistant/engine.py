@@ -156,19 +156,18 @@ class Engine:
                 base.append(d)
         return [d for d in base if d not in exclude]
 
-    def _suggestion_block(self, doc_types, lang):
+    def _suggestion_block(self, doc_types, lang, mode="add"):
         have = {r["doc_type"] for r in self.ctx.db.all(
             "SELECT DISTINCT doc_type FROM documents WHERE user_id = ? AND archived = 0", (self.user["id"],))}
-        return {"type": "suggestions", "note": t("suggestions_note", lang),
+        return {"type": "suggestions", "mode": mode, "note": t("suggestions_note", lang),
                 "items": [{"doc_type": d, "label": doc_type_label(d, lang), "in_library": d in have} for d in doc_types]}
 
     def _ask_checklist(self, conv, task, lang, again=False):
         suggested = self._suggested_for(task["purpose_key"])
         task["suggested"] = suggested
         conv.state = {"awaiting_checklist": task}
-        blocks = [self._suggestion_block(suggested, lang)] if suggested else []
+        blocks = [self._suggestion_block(suggested, lang, mode="checklist")] if suggested else []
         quick = [{"label": t("use_suggestions", lang), "send": "כן" if lang == "he" else "yes"}] if suggested else []
-        quick += [{"label": doc_type_label(d, lang), "send": doc_type_label(d, lang)} for d in suggested[:5]]
         key = "ask_checklist_again" if again else "ask_checklist"
         return {"text": t(key, lang, task=task["label"]), "blocks": blocks, "quick_replies": quick}
 

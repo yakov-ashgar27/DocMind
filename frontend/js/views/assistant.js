@@ -179,11 +179,37 @@ function requirementRow(r) {
 
 function suggestionsBlock(b, submit, historic) {
   const lang = getLang();
-  return h("div", { class: "suggest" },
-    h("div", { class: "suggest-note" }, icon("sparkle", 14), b.note),
-    h("div", { class: "chips" }, b.items.map((it) => h("button", { class: "chip suggestion", disabled: historic,
-      onclick: (e) => { e.currentTarget.disabled = true; submit((lang === "he" ? "צריך גם " : "also ") + it.label); } },
-      h("span", { class: "chip-tag" }, t("suggestion")), it.label, it.in_library ? h("span", { class: "dot ok", title: t("in_library") }) : null))));
+  const picked = new Set();
+  const box = h("div", { class: "suggest" });
+  const go = h("button", { class: "btn primary sm pick-go", hidden: true, onclick: () => {
+    const labels = b.items.filter((it) => picked.has(it.doc_type)).map((it) => it.label);
+    if (!labels.length) return;
+    box.querySelectorAll("button").forEach((x) => (x.disabled = true));
+    const list = labels.join(", ");
+    submit(b.mode === "checklist" ? list : (lang === "he" ? "צריך גם " : "also ") + list);
+  } });
+  const refresh = () => {
+    go.hidden = !picked.size;
+    go.textContent = lang === "he" ? `חיפוש ${picked.size} מסמכים שנבחרו` : `Search ${picked.size} selected`;
+  };
+  const chips = b.items.map((it) => {
+    const chip = h("button", { class: "chip suggestion", disabled: historic, "aria-pressed": "false", onclick: () => {
+      picked.has(it.doc_type) ? picked.delete(it.doc_type) : picked.add(it.doc_type);
+      chip.setAttribute("aria-pressed", picked.has(it.doc_type) ? "true" : "false");
+      refresh();
+    } }, h("span", { class: "chip-check" }, icon("check", 13)), h("span", { class: "chip-tag" }, t("suggestion")), it.label,
+      it.in_library ? h("span", { class: "dot ok", title: t("in_library") }) : null);
+    return chip;
+  });
+  const all = !historic && b.items.length > 1 ? h("button", { class: "linkish sm", onclick: () => {
+    const every = picked.size !== b.items.length;
+    b.items.forEach((it, i) => { every ? picked.add(it.doc_type) : picked.delete(it.doc_type); chips[i].setAttribute("aria-pressed", every ? "true" : "false"); });
+    refresh();
+  } }, lang === "he" ? "בחירת הכל" : "Select all") : null;
+  box.append(h("div", { class: "suggest-note" }, icon("sparkle", 14), b.note,
+    !historic ? h("span", { class: "muted" }, lang === "he" ? " אפשר לבחור כמה." : " You can pick several.") : null),
+    h("div", { class: "chips" }, chips), h("div", { class: "row wrap" }, go, all));
+  return box;
 }
 
 function proposalBlock(b, submit, historic) {

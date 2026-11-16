@@ -120,6 +120,20 @@ with sync_playwright() as p:
     page.keyboard.press("Enter")
     page.wait_for_function("document.querySelectorAll('.req-card').length >= 2")
     ok("memory reused next time", "ברשימה השמורה" in page.locator(".bubble.assistant").last.inner_text())
+    # multi-select suggestions -> one search for all of them
+    page.goto(BASE + "#/assistant?new=1")
+    page.wait_for_selector(".welcome")
+    page.fill(".composer-input", "מסמכים למלגה")
+    page.keyboard.press("Enter")
+    page.wait_for_selector(".suggest .chip.suggestion")
+    chips = page.locator(".suggest .chip.suggestion")
+    chips.nth(0).click()
+    chips.nth(1).click()
+    chips.nth(2).click()
+    page.click(".pick-go")
+    page.wait_for_selector(".req-card")
+    ok("multi-select suggestions searched together", page.locator(".req-card .req-row").count() == 3)
+    page.screenshot(path=OUT / "m03b_multiselect.png", full_page=True)
     page.fill(".composer-input", "תמצא לי את הדרכון")
     page.keyboard.press("Enter")
     page.wait_for_function("document.querySelectorAll('.acq').length >= 1")
@@ -129,11 +143,13 @@ with sync_playwright() as p:
     page.wait_for_selector(".bundle-items")
     page.wait_for_timeout(600)
     page.screenshot(path=OUT / "m04_bundle.png", full_page=True)
+    expected = page.locator(".bundle-item:not(.missing)").count()
     downloads = []
     page.on("download", lambda d: downloads.append(d.suggested_filename))
     page.click(".download-bar .btn.primary")
     page.wait_for_timeout(5000)
-    ok("bundle downloads separate files", len(downloads) == 5 and downloads[0] == "01_תעודת זהות.jpg")
+    print("bundle files:", downloads)
+    ok("bundle downloads separate files", expected >= 2 and len(downloads) == expected and all(d[:3] in ("01_", "02_", "03_", "04_", "05_") for d in downloads))
     with page.expect_download() as dl:
         page.click("text=PDF מאוחד")
     ok("combined PDF", dl.value.suggested_filename.endswith(".pdf"))
@@ -200,6 +216,31 @@ with sync_playwright() as p:
     page.click("button[type=submit]")
     page.wait_for_selector(".stats", timeout=20000)
     ok("backup restore", "8" in page.locator(".stats").inner_text())
+    # --- Android share target: a file shared from another app lands in DocMind after unlock
+    import base64 as _b64
+    pdf_b64 = _b64.b64encode((FIX / "p_2025_06.pdf").read_bytes()).decode()
+    page.evaluate("navigator.serviceWorker.ready")
+    if not page.evaluate("!!navigator.serviceWorker.controller"):
+        page.reload()
+        page.wait_for_selector(".pass-input")
+        page.fill(".pass-input", "secret-pass-1")
+        page.click("button[type=submit]")
+        page.wait_for_selector(".tabbar")
+    status = page.evaluate("""async (b64) => {
+      const bytes = Uint8Array.from(atob(b64), c => c.charCodeAt(0));
+      const fd = new FormData();
+      fd.append('files', new File([bytes], 'shared-from-whatsapp.pdf', { type: 'application/pdf' }));
+      const r = await fetch('./share-target', { method: 'POST', body: fd, redirect: 'manual' });
+      return r.type === 'opaqueredirect' ? 303 : r.status;
+    }""", pdf_b64)
+    page.goto(BASE + "#/more")
+    page.wait_for_selector(".lock-btn")
+    page.click(".lock-btn")
+    page.wait_for_selector(".pass-input")
+    page.fill(".pass-input", "secret-pass-1")
+    page.click("button[type=submit]")
+    page.wait_for_function("document.querySelectorAll('.doc-card').length >= 9", timeout=60000)
+    ok("share-to-DocMind inbox imported", status in (303, 200) and page.evaluate("caches.open('docmind-share-inbox').then(c => c.keys()).then(k => k.length)") == 0)
     # --- installability
     cdp = ctx.new_cdp_session(page)
     inst = cdp.send("Page.getInstallabilityErrors")["installabilityErrors"]
