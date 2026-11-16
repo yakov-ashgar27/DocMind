@@ -49,6 +49,8 @@ sudo apt install tesseract-ocr tesseract-ocr-heb poppler-utils imagemagick
 # then open http://localhost:8000
 ```
 
+**Install on your phone:** DocMind is an installable PWA (Chrome reports it installable). Reach your own computer privately over HTTPS with Tailscale's free Personal plan (`tailscale serve --bg 8000`), then use "Install app" / "Add to Home Screen". Step-by-step instructions are in `docs/SETUP_HE.md`.
+
 Or with Docker (free):
 
 ```bash
