@@ -16,7 +16,9 @@ jobs:
       - name: Python packages
         run: pip install -r backend/requirements-dev.txt
       - name: Frontend syntax check
-        run: for f in frontend/js/*.js frontend/js/views/*.js; do node --check "$f"; done
+        run: for f in frontend/js/*.js frontend/js/views/*.js mobile/js/*.js mobile/js/views/*.js mobile/js/core/*.js; do node --check "$f"; done
       - name: Tests
         working-directory: backend
         run: python -m pytest -q
+      - name: Phone edition behaves exactly like the server
+        run: python scripts/parity_check.py

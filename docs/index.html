@@ -52,6 +52,18 @@ code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:.92em;bac
 .privacy{background:var(--brand);color:#e9ecf5;border-radius:24px;padding:32px 24px}
 .privacy h2{color:#fff}.privacy .card{background:rgba(255,255,255,.06);border-color:rgba(255,255,255,.12)}
 .privacy .card h3{color:#fff}.privacy .card p{color:#c9cfdf}.privacy .ic{background:rgba(43,179,138,.18);color:var(--accent)}
+.edition{background:var(--surface);border:1px solid var(--line);border-radius:22px;padding:22px;margin-bottom:16px;display:flex;flex-direction:column;gap:14px}
+.edition.phone{border:2px solid var(--brand)}
+.ed-head{display:flex;gap:14px;align-items:flex-start}.ed-icon{font-size:34px;line-height:1}
+.ed-head h3{margin:6px 0 4px;font-size:22px}.ed-head p{margin:0;color:var(--ink2)}
+.btn.big{min-height:58px;font-size:18px;align-self:stretch}
+.grid.two{grid-template-columns:repeat(auto-fit,minmax(220px,1fr))}.grid.three{grid-template-columns:repeat(auto-fit,minmax(200px,1fr))}
+.edition h4{margin:0 0 4px;font-size:15px}
+.mini{display:flex;flex-direction:column;gap:8px;background:#f8f7f3;border-radius:14px;padding:14px}.mini p{margin:0;font-size:14px;color:var(--ink2)}
+.compare{background:var(--surface);border:1px solid var(--line);border-radius:22px;padding:18px;overflow-x:auto}
+.compare h3{margin:0 0 10px}.compare table{width:100%;border-collapse:collapse;font-size:15px}
+.compare th,.compare td{padding:10px 8px;border-bottom:1px solid var(--line);text-align:start}.compare tr:last-child td{border-bottom:0}
+.compare td:not(:first-of-type),.compare th:not(:first-child){text-align:center}
 .you{display:none;margin:0 auto 18px;max-width:640px;background:#fff;border:1px solid var(--line);border-radius:14px;padding:12px 16px;font-size:15px}
 .you.show{display:block}
 footer{padding:30px 0 50px;color:var(--muted);font-size:14px;text-align:center}
@@ -71,7 +83,8 @@ footer{padding:30px 0 50px;color:var(--muted);font-size:14px;text-align:center}
   <p class="lead"><span data-l="he">עוזר מסמכים אישי בעברית ובאנגלית: מזהה תעודת זהות, צו מילואים, אישור לימודים ועוד, גם כששם הקובץ הוא <code>IMG_2026…</code>. זוכר מה נדרש לכל תהליך, ומכין תיק מסמכים להורדה.</span><span data-l="en">A Hebrew/English personal document assistant: recognises ID cards, reserve orders, enrollment proofs and more, even when the file is called <code>IMG_2026…</code>. It remembers what each process needs and prepares a bundle to download.</span></p>
   <div id="you" class="you"></div>
   <div class="cta">
-    <a class="btn primary" href="#get"><span data-l="he">להתקנה בטלפון ובמחשב</span><span data-l="en">Install on phone and computer</span></a>
+    <a class="btn primary" href="app/"><span data-l="he">📱 פתיחה והתקנה בטלפון</span><span data-l="en">📱 Open and install on your phone</span></a>
+    <a class="btn ghost" href="#get"><span data-l="he">כל האפשרויות</span><span data-l="en">All options</span></a>
     <a class="btn ghost" href="https://github.com/yakov-ashgar27/DocMind"><span data-l="he">הקוד ב-GitHub</span><span data-l="en">Code on GitHub</span></a>
   </div>
   <div class="badges"><span class="badge" data-l="he">חינם</span><span class="badge" data-l="en">Free</span><span class="badge" data-l="he">קוד פתוח</span><span class="badge" data-l="en">Open source</span><span class="badge" data-l="he">Android ו-iPhone</span><span class="badge" data-l="en">Android and iPhone</span><span class="badge" data-l="he">המסמכים נשארים אצלך</span><span class="badge" data-l="en">Your documents stay yours</span></div>
@@ -98,32 +111,63 @@ footer{padding:30px 0 50px;color:var(--muted);font-size:14px;text-align:center}
 </section>
 
 <section class="get" id="get">
-  <h2 data-l="he">איך מקבלים את האפליקציה</h2><h2 data-l="en">Get the app</h2>
-  <p class="sub" data-l="he">כל אחד מריץ עותק פרטי משלו. המסמכים שלך לא עוברים לשום שרת משותף ולא למפתח.</p><p class="sub" data-l="en">Everyone runs their own private copy. Your documents never go to a shared server or to the developer.</p>
-  <div class="grid">
-    <div class="card rec">
-      <span class="tag" data-l="he">הכי מהיר: מהטלפון, בלי מחשב</span><span class="tag" data-l="en">Fastest: from your phone, no computer</span>
-      <h3 data-l="he">עותק פרטי בענן של GitHub</h3><h3 data-l="en">Private copy in GitHub's cloud</h3>
-      <ol class="steps" data-l="he"><li>להתחבר לחשבון GitHub (חינם).</li><li>ללחוץ על הכפתור ← <b>Create codespace</b> ולחכות 3 עד 5 דקות.</li><li>בלשונית <b>PORTS</b>, בשורה 8000, ללחוץ על הגלובוס.</li><li>Android: ⋮ ← "התקנת אפליקציה". iPhone: שיתוף ← "הוסף למסך הבית".</li></ol>
-      <ol class="steps" data-l="en"><li>Sign in to GitHub (free).</li><li>Tap the button → <b>Create codespace</b>, wait 3–5 minutes.</li><li>In <b>PORTS</b>, row 8000, tap the globe icon.</li><li>Android: ⋮ → "Install app". iPhone: Share → "Add to Home Screen".</li></ol>
-      <a class="btn primary" href="https://codespaces.new/yakov-ashgar27/DocMind"><span data-l="he">יצירת עותק פרטי</span><span data-l="en">Create my private copy</span></a>
-      <p class="note" data-l="he">חינם עד 60 שעות שימוש בחודש בחשבון GitHub חינמי. המכונה נרדמת אחרי 30 דקות ונמחקת אחרי 30 יום בלי שימוש. מתאים לנסות. למסמכים אישיים לאורך זמן עדיף להריץ על המחשב.</p>
-      <p class="note" data-l="en">Free up to 60 hours a month on a free GitHub account. It sleeps after 30 minutes idle and is deleted after 30 days unused. Great for trying it; for long-term personal documents prefer your own computer.</p>
+  <h2 data-l="he">שתי גרסאות — בוחרים אחת</h2><h2 data-l="en">Two editions — pick one</h2>
+  <p class="sub" data-l="he">אותו עוזר חכם, שתי דרכים להפעיל אותו. לרוב האנשים — גרסת הטלפון.</p>
+  <p class="sub" data-l="en">The same smart assistant, two ways to run it. For most people: the phone edition.</p>
+
+  <div class="edition phone" id="phone">
+    <div class="ed-head"><span class="ed-icon">📱</span><div>
+      <span class="tag" data-l="he">מומלץ לרוב האנשים</span><span class="tag" data-l="en">Recommended for most people</span>
+      <h3 data-l="he">DocMind לטלפון</h3><h3 data-l="en">DocMind for your phone</h3>
+      <p data-l="he">אפליקציה שמותקנת מהדפדפן ב-Android וב-iPhone. בלי הרשמה, בלי שרת, בחינם. המסמכים נשמרים <b>מוצפנים רק בטלפון שלך</b>, וזיהוי הטקסט בעברית רץ בטלפון עצמו.</p>
+      <p data-l="en">An app you install from the browser on Android and iPhone. No sign-up, no server, free. Your documents are stored <b>encrypted on your phone only</b>, and Hebrew text recognition runs on the phone itself.</p>
+    </div></div>
+    <a class="btn primary big" href="app/"><span data-l="he">פתיחה והתקנה</span><span data-l="en">Open and install</span></a>
+    <div class="grid two">
+      <div><h4 data-l="he">התקנה ב-Android</h4><h4 data-l="en">Install on Android</h4>
+        <ol class="steps" data-l="he"><li>ללחוץ "פתיחה והתקנה" ב-Chrome.</li><li>תפריט ⋮ ← <b>התקנת אפליקציה</b>.</li><li>לבחור קוד גישה — וזהו.</li></ol>
+        <ol class="steps" data-l="en"><li>Tap "Open and install" in Chrome.</li><li>Menu ⋮ → <b>Install app</b>.</li><li>Choose a passcode — done.</li></ol></div>
+      <div><h4 data-l="he">התקנה ב-iPhone</h4><h4 data-l="en">Install on iPhone</h4>
+        <ol class="steps" data-l="he"><li>לפתוח את הקישור ב-<b>Safari</b>.</li><li>כפתור השיתוף ← <b>הוסף למסך הבית</b>.</li><li>לפתוח מהאייקון ולבחור קוד גישה.</li></ol>
+        <ol class="steps" data-l="en"><li>Open the link in <b>Safari</b>.</li><li>Share button → <b>Add to Home Screen</b>.</li><li>Open from the icon and choose a passcode.</li></ol></div>
     </div>
-    <div class="card">
-      <span class="tag soft" data-l="he">מומלץ למסמכים אישיים</span><span class="tag soft" data-l="en">Recommended for personal documents</span>
-      <h3 data-l="he">על המחשב שלך, ובטלפון דרכו</h3><h3 data-l="en">On your computer, and on your phone through it</h3>
-      <ol class="steps" data-l="he"><li>להוריד ולפתוח את הקובץ.</li><li>להתקין Python ו-Tesseract (חינם).</li><li>Windows: לחיצה כפולה על <code>start.bat</code>. Mac: <code>./start.sh</code></li><li>לטלפון: Tailscale (חינם) ואז <code>tailscale serve --bg 8000</code>, ולהתקין מהכתובת שמתקבלת.</li></ol>
-      <ol class="steps" data-l="en"><li>Download and unzip.</li><li>Install Python and Tesseract (free).</li><li>Windows: double-click <code>start.bat</code>. Mac: <code>./start.sh</code></li><li>Phone: Tailscale (free), then <code>tailscale serve --bg 8000</code>, and install from that address.</li></ol>
-      <a class="btn ghost" href="https://github.com/yakov-ashgar27/DocMind/archive/refs/heads/main.zip"><span data-l="he">הורדה (ZIP)</span><span data-l="en">Download (ZIP)</span></a>
-      <a href="https://github.com/yakov-ashgar27/DocMind/blob/main/docs/SETUP_HE.md"><span data-l="he">מדריך מלא בעברית</span><span data-l="en">Full guide (Hebrew)</span></a>
+    <p class="note" data-l="he">המסמכים נמצאים רק בטלפון. כדאי ליצור מדי פעם קובץ גיבוי מוצפן (הגדרות ← גיבוי) ולשמור אותו בדרייב או במייל. זיהוי טקסט מתמונות מוריד מנוע פעם אחת (צריך אינטרנט בפעם הראשונה).</p>
+    <p class="note" data-l="en">Documents live only on the phone. Create an encrypted backup now and then (Settings → Backup) and keep it in Drive or email. Photo text recognition downloads an engine once (internet needed the first time).</p>
+  </div>
+
+  <div class="edition server" id="server">
+    <div class="ed-head"><span class="ed-icon">💻</span><div>
+      <span class="tag soft" data-l="he">למתקדמים</span><span class="tag soft" data-l="en">Advanced</span>
+      <h3>DocMind Server</h3>
+      <p data-l="he">גרסה שרצה על המחשב שלך (או בענן הפרטי שלך ב-GitHub), עם חיבור ל-<b>Gmail ו-Google Drive</b>, סריקת קבצים מצורפים ברקע, אימות דו-שלבי ונגישות מכמה מכשירים.</p>
+      <p data-l="en">Runs on your own computer (or your private GitHub cloud) with <b>Gmail and Google Drive</b> connections, background attachment indexing, two-step sign-in and access from several devices.</p>
+    </div></div>
+    <div class="grid three">
+      <div class="mini"><h4 data-l="he">על המחשב</h4><h4 data-l="en">On your computer</h4>
+        <p data-l="he">להוריד, להתקין Python ו-Tesseract, ולהפעיל <code>start.bat</code> / <code>./start.sh</code>.</p><p data-l="en">Download, install Python and Tesseract, run <code>start.bat</code> / <code>./start.sh</code>.</p>
+        <a class="btn ghost" href="https://github.com/yakov-ashgar27/DocMind/archive/refs/heads/main.zip"><span data-l="he">הורדה (ZIP)</span><span data-l="en">Download (ZIP)</span></a></div>
+      <div class="mini"><h4 data-l="he">בענן הפרטי שלך</h4><h4 data-l="en">In your private cloud</h4>
+        <p data-l="he">עותק פרטי ב-GitHub Codespaces (60 שעות בחודש בחינם).</p><p data-l="en">A private copy in GitHub Codespaces (60 free hours a month).</p>
+        <a class="btn ghost" href="https://codespaces.new/yakov-ashgar27/DocMind"><span data-l="he">יצירת עותק</span><span data-l="en">Create a copy</span></a></div>
+      <div class="mini"><h4>Docker</h4><p><code>docker compose up --build</code></p>
+        <a class="btn ghost" href="https://github.com/yakov-ashgar27/DocMind/blob/main/docs/SETUP_HE.md"><span data-l="he">מדריך בעברית</span><span data-l="en">Hebrew guide</span></a></div>
     </div>
-    <div class="card">
-      <span class="tag soft">Docker</span>
-      <h3 data-l="he">לשרת ביתי או למתקדמים</h3><h3 data-l="en">For a home server or advanced users</h3>
-      <p><code>cp .env.example .env</code><br><code>docker compose up --build</code></p>
-      <a href="https://github.com/yakov-ashgar27/DocMind#readme"><span data-l="he">הוראות ב-README</span><span data-l="en">Instructions in the README</span></a>
-    </div>
+  </div>
+
+  <div class="compare">
+    <h3 data-l="he">מה ההבדל?</h3><h3 data-l="en">What's the difference?</h3>
+    <table>
+      <thead><tr><th></th><th>📱 <span data-l="he">טלפון</span><span data-l="en">Phone</span></th><th>💻 Server</th></tr></thead>
+      <tbody>
+        <tr><td data-l="he">התקנה</td><td data-l="en">Setup</td><td data-l="he">לחיצה אחת</td><td data-l="en">One tap</td><td data-l="he">מחשב / ענן</td><td data-l="en">Computer / cloud</td></tr>
+        <tr><td data-l="he">איפה המסמכים</td><td data-l="en">Where documents live</td><td data-l="he">רק בטלפון</td><td data-l="en">Only on the phone</td><td data-l="he">במחשב שלך</td><td data-l="en">On your computer</td></tr>
+        <tr><td data-l="he">זיהוי טקסט בעברית, עוזר, זיכרון, תיקים</td><td data-l="en">Hebrew OCR, assistant, memory, bundles</td><td>✓</td><td>✓</td></tr>
+        <tr><td data-l="he">כספת מוצפנת, תזכורות, ייבוא וואטסאפ</td><td data-l="en">Encrypted vault, reminders, WhatsApp import</td><td>✓</td><td>✓</td></tr>
+        <tr><td data-l="he">Gmail ו-Google Drive</td><td data-l="en">Gmail and Google Drive</td><td>—</td><td>✓</td></tr>
+        <tr><td data-l="he">כמה מכשירים</td><td data-l="en">Several devices</td><td data-l="he">דרך קובץ גיבוי</td><td data-l="en">Via backup file</td><td>✓</td></tr>
+        <tr><td data-l="he">עלות</td><td data-l="en">Cost</td><td data-l="he">חינם</td><td data-l="en">Free</td><td data-l="he">חינם</td><td data-l="en">Free</td></tr>
+      </tbody>
+    </table>
   </div>
 </section>
 

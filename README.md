@@ -2,7 +2,21 @@
 
 [![Open in GitHub Codespaces](https://github.com/codespaces/badge.svg)](https://codespaces.new/yakov-ashgar27/DocMind)
 
-🌐 **Website (install on phone / computer):** https://yakov-ashgar27.github.io/DocMind/
+🌐 **Website:** https://yakov-ashgar27.github.io/DocMind/ · 📱 **Phone app:** https://yakov-ashgar27.github.io/DocMind/app/
+
+## Two editions
+
+| | 📱 **Phone edition** (`mobile/`) | 💻 **DocMind Server** (`backend/` + `frontend/`) |
+|---|---|---|
+| Install | Open the link, then "Install app" / "Add to Home Screen" | Your computer, Docker or Codespaces |
+| Where documents live | Encrypted on the phone only (IndexedDB + WebCrypto) | Encrypted on your computer |
+| Hebrew OCR, assistant, memory, bundles, vault, reminders, WhatsApp import | ✅ | ✅ |
+| Gmail and Google Drive | — | ✅ |
+| Server needed | No | Yes (yours) |
+
+Both editions share one knowledge base (`backend/docmind/knowledge/catalog.py`, exported to `mobile/js/catalog.js`), and CI verifies that they classify documents and understand requests identically (`scripts/parity_check.py`).
+
+**Phone edition security:** a passcode derives the key with PBKDF2 (600k iterations), so without it nothing can be decrypted. Every document has its own AES-256-GCM key. Protected folders wrap those keys with an RSA-3072 vault key whose private half is sealed by the vault PIN, so documents can be *added* to the vault without the PIN, but only the PIN opens them. The app auto-locks, slows down repeated wrong passcodes, and makes encrypted backup files for moving to a new phone. OCR (tesseract.js) is downloaded once from a CDN and then cached. Document bytes never leave the device.
 
 > Tell it what you need. It finds what you have, remembers what you need, and helps you obtain what is missing.
 
