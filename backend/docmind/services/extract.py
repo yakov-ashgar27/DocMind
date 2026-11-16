@@ -24,7 +24,10 @@ SUPPORTED_MIME = {
     "image/avif": ".avif",
     "image/tiff": ".tiff",
     "text/plain": ".txt",
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.document": ".docx",
+    "application/msword": ".doc",
 }
+DOCX = "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
 
 
 @dataclass
@@ -53,6 +56,10 @@ def sniff_mime(data: bytes, filename: str) -> str | None:
             return "image/heic"
     if data[:4] in (b"II*\x00", b"MM\x00*"):
         return "image/tiff"
+    if data[:4] == b"PK\x03\x04" and filename.lower().endswith(".docx"):
+        return DOCX
+    if data[:8] == b"\xd0\xcf\x11\xe0\xa1\xb1\x1a\xe1" and filename.lower().endswith(".doc"):
+        return "application/msword"
     if filename.lower().endswith(".txt"):
         try:
             data[:4096].decode("utf-8")
@@ -138,6 +145,12 @@ def extract_text(data: bytes, mime: str, langs: str = "heb+eng", max_pdf_pages: 
         return Extraction(_clean(text), True, 1, detect_language(text))
     if mime == "application/pdf":
         return _extract_pdf(data, langs, max_pdf_pages)
+    if mime == DOCX:
+        t = _clean(docx_text(data))
+        return Extraction(t, False, 1, detect_language(t))
+    if mime == "application/msword":
+        t = _clean(doc_text(data))
+        return Extraction(t, False, 1, detect_language(t))
     raise ValueError(f"unsupported type {mime}")
 
 
@@ -169,6 +182,34 @@ def _extract_pdf(data: bytes, langs: str, max_pages: int) -> Extraction:
                 ocr_texts.append(_ocr_image(img, langs))
     text = _clean("\n".join(ocr_texts)) or native
     return Extraction(text, True, pages or len(ocr_texts), detect_language(text))
+
+
+def docx_text(data: bytes) -> str:
+    import zipfile
+    with zipfile.ZipFile(io.BytesIO(data)) as z:
+        info = z.getinfo("word/document.xml")
+        if info.file_size > 20 * 1024 * 1024:
+            raise ValueError("docx_too_large")
+        xml = z.read(info).decode("utf-8", errors="replace")
+    xml = re.sub(r"</w:p>", "\n", xml)
+    xml = re.sub(r"<w:tab/>", " ", xml)
+    text = re.sub(r"<[^>]+>", "", xml)
+    import html
+    return html.unescape(text)
+
+
+def doc_text(data: bytes) -> str:
+    """Legacy Word (.doc): pull readable UTF-16LE runs (Hebrew/Latin/digits) out of the binary."""
+    runs = re.findall(rb"(?:(?:[\x20-\x7e]|[\xd0-\xea])\x00|[\x00-\xff]\x05|\r\x00){4,}", data)
+    out = []
+    for r in runs:
+        try:
+            s = r.decode("utf-16-le")
+        except UnicodeDecodeError:
+            continue
+        if re.search(r"[\u0590-\u05FFA-Za-z]{2}", s):
+            out.append(s)
+    return "\n".join(out).replace("\r", "\n")
 
 
 def _fix_reversed_hebrew(text: str) -> str:

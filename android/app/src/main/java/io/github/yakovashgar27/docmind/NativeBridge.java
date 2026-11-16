@@ -8,6 +8,8 @@ import android.content.SharedPreferences;
 import android.database.Cursor;
 import android.net.Uri;
 import android.os.Build;
+import android.os.Environment;
+import android.provider.Settings;
 import android.provider.DocumentsContract;
 import android.provider.MediaStore;
 import android.provider.OpenableColumns;
@@ -68,6 +70,7 @@ public class NativeBridge {
             o.put("platform", "android");
             o.put("sdk", Build.VERSION.SDK_INT);
             o.put("media", act.hasMediaPermission());
+            o.put("allFiles", hasAllFiles());
             o.put("folders", folders());
             o.put("bundledOcr", assetExists("www/vendor/tesseract/tesseract.min.js"));
             return o.toString();
@@ -76,6 +79,82 @@ public class NativeBridge {
 
     @JavascriptInterface
     public void requestMedia() { act.runOnUiThread(act::requestMediaPermission); }
+
+    static boolean hasAllFiles() {
+        return Build.VERSION.SDK_INT >= 30 ? Environment.isExternalStorageManager() : false;
+    }
+
+    /** Opens the system screen where the user can allow "All files access" for DocMind. */
+    @JavascriptInterface
+    public void requestAllFiles() {
+        act.runOnUiThread(() -> {
+            if (Build.VERSION.SDK_INT < 30) { act.requestMediaPermission(); return; }
+            try {
+                act.startActivity(new Intent(Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION,
+                        Uri.parse("package:" + act.getPackageName())));
+            } catch (Exception e) {
+                act.startActivity(new Intent(Settings.ACTION_MANAGE_ALL_FILES_ACCESS_PERMISSION));
+            }
+        });
+    }
+
+    static String mimeOf(String path) {
+        String p = path.toLowerCase();
+        if (p.endsWith(".pdf")) return "application/pdf";
+        if (p.endsWith(".jpg") || p.endsWith(".jpeg")) return "image/jpeg";
+        if (p.endsWith(".png")) return "image/png";
+        if (p.endsWith(".webp")) return "image/webp";
+        if (p.endsWith(".heic") || p.endsWith(".heif")) return "image/heic";
+        if (p.endsWith(".docx")) return "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
+        if (p.endsWith(".doc")) return "application/msword";
+        return null;
+    }
+
+    /** Full scan of shared storage (needs "All files access", Android 11+ or legacy storage on 10-). */
+    private void scanFileSystem(JSONArray out, long sinceMs) throws Exception {
+        File root = Environment.getExternalStorageDirectory();
+        String[] dirs = {"Download", "Documents", "DCIM", "Pictures",
+                "Android/media/com.whatsapp/WhatsApp/Media", "Android/media/com.whatsapp.w4b/WhatsApp Business/Media", "WhatsApp/Media"};
+        Set<String> seen = new HashSet<>();
+        for (String d : dirs) walkFs(new File(root, d), 0, out, sinceMs, seen);
+    }
+
+    private void walkFs(File dir, int depth, JSONArray out, long sinceMs, Set<String> seen) throws Exception {
+        if (depth > MAX_DEPTH || out.length() > MAX_FOLDER_FILES || dir == null || !dir.isDirectory()) return;
+        File[] list = dir.listFiles();
+        if (list == null) return;
+        for (File f : list) {
+            String name = f.getName();
+            if (name.startsWith(".")) continue;
+            if (f.isDirectory()) {
+                String n = name.toLowerCase();
+                if (n.contains("sticker") || n.contains("voice") || n.contains("audio") || n.contains("video") || n.contains("gif")
+                        || n.equals("thumbnails") || n.equals("cache")) continue;
+                walkFs(f, depth + 1, out, sinceMs, seen);
+                continue;
+            }
+            String mime = mimeOf(name);
+            if (mime == null) continue;
+            long size = f.length(), modified = f.lastModified();
+            boolean isImage = mime.startsWith("image/");
+            if (size < 10_000 || size > 25_000_000) continue;
+            if (isImage && modified <= sinceMs) continue; // old photos are rarely needed documents; PDFs/Word of any age are kept
+            String path = f.getCanonicalPath();
+            if (!seen.add(path)) continue;
+            Uri u = Uri.fromFile(f);
+            String lower = path.toLowerCase();
+            JSONObject o = new JSONObject();
+            o.put("uri", u.toString());
+            o.put("name", name);
+            o.put("size", size);
+            o.put("mime", mime);
+            o.put("modified", modified);
+            o.put("source", lower.contains("whatsapp") ? "whatsapp" : lower.contains("/download") ? "downloads"
+                    : (lower.contains("/dcim") || lower.contains("/pictures")) ? "gallery" : "folder");
+            out.put(o);
+            allow(u);
+        }
+    }
 
     // ---- user-granted folders (Storage Access Framework) ----------------------------------------
     @JavascriptInterface
@@ -133,7 +212,8 @@ public class NativeBridge {
         new Thread(() -> {
             JSONArray out = new JSONArray();
             try {
-                if (act.hasMediaPermission()) scanImages(out, (long) sinceMs, maxImages);
+                if (hasAllFiles()) scanFileSystem(out, (long) sinceMs);
+                else if (act.hasMediaPermission()) scanImages(out, (long) sinceMs, maxImages);
                 JSONArray fs = folders();
                 for (int i = 0; i < fs.length(); i++) {
                     JSONObject f = fs.getJSONObject(i);
@@ -194,7 +274,7 @@ public class NativeBridge {
                     walk(tree, id, kind, depth + 1, out, sinceMs);
                     continue;
                 }
-                if (mime == null || !(mime.equals("application/pdf") || mime.startsWith("image/"))) continue;
+                if (mime == null || mimeOf(name == null ? "" : name) == null && !(mime.equals("application/pdf") || mime.startsWith("image/"))) continue;
                 long size = c.isNull(3) ? 0 : c.getLong(3);
                 long modified = c.isNull(4) ? 0 : c.getLong(4);
                 if (size < 10_000 || size > 25_000_000 || modified <= sinceMs) continue;

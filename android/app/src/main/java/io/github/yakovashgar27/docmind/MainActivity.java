@@ -110,8 +110,15 @@ public class MainActivity extends Activity {
             String uriStr = new String(Base64.decode(path.substring(5), Base64.URL_SAFE | Base64.NO_WRAP | Base64.NO_PADDING), "UTF-8");
             Uri uri = Uri.parse(uriStr);
             if (!bridge.isAllowed(uri)) return new WebResourceResponse("text/plain", "utf-8", 403, "Forbidden", null, null);
-            InputStream in = getContentResolver().openInputStream(uri);
-            String mime = getContentResolver().getType(uri);
+            InputStream in;
+            String mime;
+            if ("file".equals(uri.getScheme())) {
+                in = new java.io.FileInputStream(new java.io.File(uri.getPath()));
+                mime = NativeBridge.mimeOf(uri.getPath());
+            } else {
+                in = getContentResolver().openInputStream(uri);
+                mime = getContentResolver().getType(uri);
+            }
             return new WebResourceResponse(mime != null ? mime : "application/octet-stream", null, in);
         } catch (Exception e) {
             return new WebResourceResponse("text/plain", "utf-8", 404, "Not found", null, null);
@@ -191,6 +198,13 @@ public class MainActivity extends Activity {
     public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
         if (requestCode == REQ_MEDIA_PERMISSION) bridge.emit("permission", "{\"media\":" + hasMediaPermission() + "}");
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        // Returning from Settings after granting "All files access".
+        if (bridge != null) bridge.emit("permission", "{\"media\":" + hasMediaPermission() + ",\"allFiles\":" + NativeBridge.hasAllFiles() + "}");
     }
 
     @Override

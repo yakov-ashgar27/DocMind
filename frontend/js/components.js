@@ -74,7 +74,9 @@ export async function openPreview(doc) {
   const { sheet } = await import("./ui.js");
   const body = doc.mime_type === "application/pdf"
     ? h("iframe", { class: "preview-frame", src: url, title: doc.display_name })
-    : h("img", { class: "preview-img", src: url, alt: doc.display_name });
+    : doc.mime_type.startsWith("image/") ? h("img", { class: "preview-img", src: url, alt: doc.display_name })
+    : h("div", { class: "empty" }, icon("doc", 40), h("p", {}, doc.original_filename), h("p", { class: "meta muted" },
+        getLang() === "he" ? "קובץ Word — אפשר להוריד או לשתף ולפתוח באפליקציית Word." : "Word file: download or share it to open in Word."));
   sheet(doc.display_name, h("div", { class: "preview" }, body,
     h("div", { class: "row end" }, h("button", { class: "btn ghost", onclick: () => downloadDoc(doc) }, icon("download", 16), t("download")))), { wide: true });
 }
@@ -85,7 +87,7 @@ export async function downloadDoc(doc) {
 }
 
 export function uploadButtons(onDone, { compact = false, waOnly = false } = {}) {
-  const input = h("input", { type: "file", multiple: true, accept: "application/pdf,image/*,.heic,.heif,.avif,.txt", class: "visually-hidden",
+  const input = h("input", { type: "file", multiple: true, accept: "application/pdf,image/*,.heic,.heif,.avif,.txt,.doc,.docx", class: "visually-hidden",
     onchange: async () => {
       if (!input.files.length) return;
       const fd = new FormData();

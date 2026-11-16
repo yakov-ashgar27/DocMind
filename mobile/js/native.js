@@ -10,9 +10,10 @@ export function onNative(event, fn) { (listeners[event] ||= []).push(fn); }
 function once(event) { return new Promise((resolve) => { const fn = (d) => { listeners[event] = listeners[event].filter((x) => x !== fn); resolve(d); }; onNative(event, fn); }); }
 
 export function info() {
-  if (!isNative) return { platform: "web", media: false, folders: [], bundledOcr: false };
+  if (!isNative) return { platform: "web", media: false, allFiles: false, folders: [], bundledOcr: false };
   try { return JSON.parse(N.info()); } catch { return { platform: "android", media: false, folders: [], bundledOcr: false }; }
 }
+export async function requestAllFiles() { const p = once("permission"); N.requestAllFiles(); return (await p).allFiles; }
 export async function requestMedia() { const p = once("permission"); N.requestMedia(); return (await p).media; }
 export async function addFolder(kind) { const p = once("folder"); N.addFolder(kind); return (await p).ok; }
 export function removeFolder(uri) { N.removeFolder(uri); }

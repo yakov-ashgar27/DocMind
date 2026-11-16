@@ -77,6 +77,8 @@ function assistantBubble(r, submit, historic = false) {
     if (b.type === "requirements") el.append(requirementsBlock(b));
     if (b.type === "suggestions") el.append(suggestionsBlock(b, submit, historic));
     if (b.type === "proposal") el.append(proposalBlock(b, submit, historic));
+    if (b.type === "hint") el.append(h("div", { class: "card notice hint" }, icon("search", 18), h("span", {}, t(b.key)),
+      h("a", { class: "btn primary sm", href: b.action.href }, t(b.action.label_key))));
     if (b.type === "documents") el.append(h("div", { class: "doc-list" }, b.documents.map((d) => docCard(d, { onClick: () => navigate(`/doc/${d.id}`) }))));
   }
   const actions = (r.actions || []).filter((a) => a.type === "create_bundle" || a.type === "open_upload");

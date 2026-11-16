@@ -191,7 +191,7 @@ export function scanCard(compact = false) {
   btn.onclick = async () => {
     if (scanner.state.running) { scanner.state.stop = true; return; }
     const inf = native.info();
-    if (!inf.media && !inf.folders.length) await native.requestMedia();
+    if (!inf.allFiles && !inf.media && !inf.folders.length) await native.requestAllFiles();
     const r = await scanner.run();
     toast(t("scan_done", { n: r.found }), "ok");
     render();
@@ -220,6 +220,8 @@ async function nativeSourcesView(root) {
   root.append(h("div", { class: "page-head" }, h("h1", {}, t("accounts"))),
     scanCard(),
     h("ol", { class: "sources" },
+      row("folder", t("all_files"), t("all_files_desc"), inf.allFiles,
+        inf.allFiles ? null : h("button", { class: "btn primary sm", onclick: async () => { await native.requestAllFiles(); render(); } }, t("allow"))),
       row("image", t("src_gallery"), t("src_gallery_desc"), inf.media,
         inf.media ? null : h("button", { class: "btn primary sm", onclick: async () => { await native.requestMedia(); render(); } }, t("allow"))),
       row("download", t("src_downloads"), t("src_downloads_desc"), folderOf("downloads").length, h("div", { class: "col tight" }, folderBtn("downloads"), granted("downloads"))),

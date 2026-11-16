@@ -356,3 +356,5 @@ input.compact { width: auto; max-width: 180px; min-height: 36px; }
 .scan-card { display: flex; flex-direction: column; gap: 10px; }
 .scan-card h2 { margin: 0; display: flex; align-items: center; gap: 4px; }
 .scan-cta { background: var(--brand); color: #fff; border-color: var(--brand); }
+.card.notice.hint { flex-wrap: wrap; background: var(--warn-bg); border-color: transparent; cursor: default; }
+.card.notice.hint span { flex: 1 1 200px; }

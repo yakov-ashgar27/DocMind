@@ -2,7 +2,9 @@
 // Hebrew + English, downloaded once and cached by the service worker). Document bytes never leave the device.
 
 export const SUPPORTED = { "application/pdf": ".pdf", "image/jpeg": ".jpg", "image/png": ".png", "image/webp": ".webp",
-  "image/heic": ".heic", "image/avif": ".avif", "image/tiff": ".tiff", "text/plain": ".txt" };
+  "image/heic": ".heic", "image/avif": ".avif", "image/tiff": ".tiff", "text/plain": ".txt",
+  "application/vnd.openxmlformats-officedocument.wordprocessingml.document": ".docx", "application/msword": ".doc" };
+const DOCX = "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
 
 const TESSERACT_URL = "https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js";
 
@@ -18,6 +20,8 @@ export function sniff(u8, name = "") {
     if (["heic", "heix", "heim", "heis", "hevc", "hevx", "mif1", "msf1"].includes(brand)) return "image/heic";
   }
   if (s(0, 4) === "II*\0" || s(0, 4) === "MM\0*") return "image/tiff";
+  if (s(0, 4) === "PK\x03\x04" && name.toLowerCase().endsWith(".docx")) return DOCX;
+  if (u8[0] === 0xd0 && u8[1] === 0xcf && u8[2] === 0x11 && u8[3] === 0xe0 && name.toLowerCase().endsWith(".doc")) return "application/msword";
   if (name.toLowerCase().endsWith(".txt")) {
     try { new TextDecoder("utf-8", { fatal: true }).decode(u8.slice(0, 4096)); return "text/plain"; } catch { return null; }
   }
@@ -134,7 +138,28 @@ async function renderPdfPage(page, scale) {
   return c;
 }
 
+async function docxText(u8) {
+  const { readZip } = await import("./zip.js");
+  const entry = (await readZip(u8)).find((e) => e.name === "word/document.xml");
+  if (!entry) throw new Error("invalid_docx");
+  let xml = new TextDecoder().decode(await entry.read());
+  xml = xml.replace(/<\/w:p>/g, "\n").replace(/<w:tab\/>/g, " ").replace(/<[^>]+>/g, "");
+  const ta = document.createElement("textarea");
+  ta.innerHTML = xml; // decode &amp; etc. (textarea content is never rendered as HTML)
+  return ta.value;
+}
+
+// Legacy Word (.doc): readable UTF-16LE runs (Hebrew/Latin/digits) inside the binary.
+function docText(u8) {
+  const even = u8.length - (u8.length % 2);
+  const text = new TextDecoder("utf-16le").decode(u8.subarray(0, even));
+  const runs = text.match(/[\u0590-\u05FF\u0020-\u007E\r]{4,}/g) || [];
+  return runs.filter((r) => /[\u0590-\u05FFA-Za-z]{2}/.test(r)).join("\n").replace(/\r/g, "\n");
+}
+
 export async function extractText(u8, mime, { maxPages = 4 } = {}) {
+  if (mime === DOCX) { const t = clean(await docxText(u8)); return { text: t, ocr: false, language: detectLanguage(t) }; }
+  if (mime === "application/msword") { const t = clean(docText(u8)); return { text: t, ocr: false, language: detectLanguage(t) }; }
   if (mime === "text/plain") { const t = new TextDecoder().decode(u8); return { text: t, ocr: false, language: detectLanguage(t) }; }
   if (mime.startsWith("image/")) {
     const img = await decodeImage(u8, mime);

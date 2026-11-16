@@ -208,6 +208,16 @@ function summary(plan, results, lang) {
   if (outdated) lines.push(t("outdated_note", lang, { n: outdated }));
   return lines;
 }
+async function hintBlock(results) {
+  if (!results.some((r) => r.status === "not_found")) return null;
+  const native = await import("../native.js");
+  if (native.isNative) {
+    const scanner = await import("./scanner.js");
+    if (await scanner.lastScan()) return null;
+    return { type: "hint", key: "hint_scan", action: { label_key: "hint_scan_btn", href: "#/accounts" } };
+  }
+  return { type: "hint", key: "hint_web", action: { label_key: "hint_upload", href: "#/library" } };
+}
 const resultsBlock = (plan, results, title = null) => ({ type: "requirements", title, results, sources_searched: plan.searched,
   sources_unavailable: plan.unavailable, sources_failed: [] });
 function bundleAction(taskLabel, results, lang) {
@@ -224,6 +234,8 @@ async function runTask(conv, task, items, lang, checklist) {
   const lines = checklist ? [t("remembered", lang, { name: checklist.name, n: items.length })] : [];
   lines.push(...summary(plan, results, lang));
   const blocks = [resultsBlock(plan, results, task.label)];
+  const hint = await hintBlock(results);
+  if (hint) blocks.push(hint);
   const suggested = suggestedFor(task.purpose_key, items.map((i) => i.doc_type));
   if (suggested.length) blocks.push(await suggestionBlock(suggested, lang));
   if (!checklist) {
@@ -279,7 +291,8 @@ async function find(types, lang) {
   const { plan, results } = await searchAll(items, lang);
   const lines = [t("find_summary", lang, { sources: joinList(plan.searched.map((s) => s.label[lang]), lang) }), ...summary(plan, results, lang).slice(1), t("anything_else", lang)];
   const actions = items.length > 1 ? [bundleAction(joinList(items.map((i) => i.label), lang).slice(0, 60), results, lang)] : [];
-  return { text: lines.join("\n"), blocks: [resultsBlock(plan, results)], actions, quick_replies: [] };
+  const hint = await hintBlock(results);
+  return { text: lines.join("\n"), blocks: [resultsBlock(plan, results), ...(hint ? [hint] : [])], actions, quick_replies: [] };
 }
 
 async function freeSearch(text, lang) {
