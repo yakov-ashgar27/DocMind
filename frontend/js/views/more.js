@@ -94,6 +94,8 @@ export async function settingsView(root) {
       setting(t("ai_consent"), meta.llm.available ? t("ai_consent_desc") : t("ai_unavailable"),
         toggle("ai_provider_consent", s.ai_provider_consent, { disabled: !meta.llm.available })),
       setting(t("remember_locations"), null, toggle("remember_locations", s.remember_locations !== false)),
+      setting(t("reminder_days"), t("calendar_hint"), h("select", { class: "compact", onchange: (e) => update({ reminder_days: Number(e.target.value) }) },
+        [14, 30, 60, 90].map((n) => h("option", { value: n, selected: (s.reminder_days || 60) === n }, t("days", { n }))))),
       setting(t("shared"), t("shared_desc"), toggle("shared_learning_opt_in", s.shared_learning_opt_in, { disabled: !meta.shared_learning_available }))),
     h("section", { class: "card settings" }, h("h2", {}, t("security")),
       h("div", { class: "row wrap" },

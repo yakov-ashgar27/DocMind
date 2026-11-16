@@ -308,3 +308,6 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--b
 
 @media (max-width: 420px) { .grid2 { grid-template-columns: 1fr; } .stats { gap: 8px; } .stat { padding: 12px; } }
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
+.thumb.warn { background: var(--warn-bg); color: var(--warn); border-color: transparent; }
+.thumb.bad { background: var(--bad-bg); color: var(--bad); border-color: transparent; }
+select.compact { width: auto; min-width: 110px; }

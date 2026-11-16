@@ -178,6 +178,10 @@ def signed_download(token):
     elif p["k"] == "bundle_pdf":
         data, name = bundlesvc.combined_pdf(c, user, p["r"]["b"])
         mime, inline = "application/pdf", False
+    elif p["k"] == "ics":
+        from ..services.reminders import calendar_ics
+        data, name, mime, inline = calendar_ics(c, user, p["r"].get("ids") or None), "docmind-reminders.ics", "text/calendar", False
+        audit(c, user["id"], "reminders.export")
     else:
         return jsonify(error="bad_link"), 400
     resp = send_file(io.BytesIO(data), mimetype=mime, as_attachment=not inline, download_name=name)

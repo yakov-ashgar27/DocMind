@@ -1,6 +1,6 @@
-import { api } from "../api.js";
+import { api, triggerDownload } from "../api.js";
 import { docCard, uploadButtons } from "../components.js";
-import { getLang, t } from "../i18n.js";
+import { fmtDate, getLang, t } from "../i18n.js";
 import { navigate } from "../router.js";
 import { store } from "../store.js";
 import { h, icon } from "../ui.js";
@@ -34,6 +34,19 @@ export async function homeView(root) {
   if (!d.totals.documents) {
     root.append(h("section", { class: "card onboarding" }, h("p", {}, t("empty_library")), uploadButtons(() => navigate("/library"))));
     return;
+  }
+
+  if (d.reminders?.length) {
+    root.append(section(t("reminders"), h("div", { class: "list" }, d.reminders.map((r) =>
+      h("button", { class: "list-item", onclick: () => navigate(`/doc/${r.document.id}`) },
+        h("div", { class: `thumb sm ${r.state === "expired" ? "bad" : "warn"}` }, icon("clock", 20)),
+        h("div", { class: "doc-main" }, h("div", { class: "doc-title" }, r.document.display_name),
+          h("div", { class: "meta" }, `${fmtDate(r.expiry_date)} · ${r.days_left < 0 ? t("expired_ago", { n: -r.days_left }) : t("days_left", { n: r.days_left })}`)),
+        icon("chevron", 16)))),
+      h("button", { class: "btn ghost sm", onclick: async () => {
+        const { url } = await api("/reminders/calendar-link", { method: "POST", body: {} });
+        triggerDownload(url, "docmind-reminders.ics");
+      } }, icon("clock", 15), t("all_to_calendar"))));
   }
 
   if (d.attention.length) {

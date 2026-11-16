@@ -1,4 +1,4 @@
-import { api, dropThumb } from "../api.js";
+import { api, dropThumb, triggerDownload } from "../api.js";
 import { categorySelect, docCard, docMeta, docTypeSelect, downloadDoc, openPreview, sourceLabel, thumb, uploadButtons } from "../components.js";
 import { fmtDate, getLang, L, t, errText } from "../i18n.js";
 import { navigate } from "../router.js";
@@ -80,7 +80,11 @@ export async function documentView(root, params) {
         ? h("div", { class: "meta muted" }, `${Math.round(d.doc_type_confidence * 100)}% · auto`) : null,
       h("div", { class: "row wrap" },
         h("button", { class: "btn primary sm", onclick: () => openPreview(d) }, icon("eye", 16), t("preview")),
-        h("button", { class: "btn ghost sm", onclick: () => downloadDoc(d) }, icon("download", 16), t("download")))));
+        h("button", { class: "btn ghost sm", onclick: () => downloadDoc(d) }, icon("download", 16), t("download")),
+        d.expiry_date ? h("button", { class: "btn ghost sm", title: t("calendar_hint"), onclick: async () => {
+          const { url } = await api("/reminders/calendar-link", { method: "POST", body: { document_ids: [d.id] } });
+          triggerDownload(url, "docmind-reminder.ics");
+        } }, icon("clock", 16), t("add_to_calendar")) : null))));
 
   root.append(h("div", { class: "page-head" }, h("button", { class: "btn ghost sm", onclick: () => history.back() }, t("back"))), top);
 

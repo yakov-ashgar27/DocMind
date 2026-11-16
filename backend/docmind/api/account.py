@@ -12,9 +12,10 @@ from ..security.auth import require_auth
 from ..services import classifier
 from ..services import documents as docsvc
 from ..services import memory as memsvc
+from ..services import reminders as remsvc
 from . import api, body, ctx
 
-SETTINGS_KEYS = {"ai_provider_consent": bool, "shared_learning_opt_in": bool, "remember_locations": bool}
+SETTINGS_KEYS = {"ai_provider_consent": bool, "shared_learning_opt_in": bool, "remember_locations": bool, "reminder_days": int}
 
 
 @api.get("/meta")
@@ -44,7 +45,12 @@ def patch_me():
     values = {}
     for k, typ in SETTINGS_KEYS.items():
         if k in b:
-            settings[k] = typ(b[k])
+            try:
+                settings[k] = typ(b[k])
+            except (TypeError, ValueError):
+                return jsonify(error=f"invalid_{k}"), 400
+    if "reminder_days" in settings and settings["reminder_days"] not in remsvc.ALLOWED_LEAD_DAYS:
+        return jsonify(error="invalid_reminder_days"), 400
     values["settings_json"] = json.dumps(settings)
     if b.get("locale") in ("he", "en"):
         values["locale"] = b["locale"]
@@ -181,4 +187,20 @@ def dashboard():
                 "bundles": c.db.one("SELECT COUNT(*) n FROM bundles WHERE user_id = ?", (uid,))["n"]},
         attention=attention[:8], recent_documents=[docsvc.public(d) for d in sorted(docs, key=lambda d: d["created_at"], reverse=True)[:6]],
         bundles=list_bundles(c, g.user)[:4], checklists=memsvc.list_checklists(c, uid)[:4],
+        reminders=remsvc.upcoming(c, g.user)[:5],
         proposals=memsvc.pending_proposals(c, uid))
+
+
+# ---- reminders ---------------------------------------------------------------------------------
+@api.get("/reminders")
+@require_auth
+def reminders():
+    return jsonify(reminders=remsvc.upcoming(ctx(), g.user), lead_days=remsvc.lead_days(g.user))
+
+
+@api.post("/reminders/calendar-link")
+@require_auth
+def reminders_calendar_link():
+    from . import sign_link
+    ids = [str(i) for i in (body().get("document_ids") or [])][:200]
+    return jsonify(url=sign_link(g.user["id"], "ics", {"ids": ids}))
