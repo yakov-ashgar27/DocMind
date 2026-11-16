@@ -123,8 +123,8 @@ def _ocr_image(img, langs: str) -> str:
             angle = int(re.search(r"Rotate: (\d+)", osd).group(1))
             if angle:
                 text = pytesseract.image_to_string(gray.rotate(-angle, expand=True), lang=langs)
-        except Exception:
-            pass
+        except Exception as e:  # orientation detection is best-effort
+            log.debug("osd failed: %s", e)
     return text
 
 

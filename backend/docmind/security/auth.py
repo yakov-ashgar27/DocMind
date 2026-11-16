@@ -20,6 +20,7 @@ REFRESH_COOKIE = "dm_refresh"
 class AuthError(Exception):
     def __init__(self, message: str, status: int = 401):
         super().__init__(message)
+        self.code = message
         self.status = status
 
 
@@ -49,14 +50,66 @@ def register_user(ctx, email: str, password: str, display_name: str, locale: str
     return ctx.db.one("SELECT * FROM users WHERE id = ?", (uid,))
 
 
+MAX_LOGIN_FAILS = 10
+LOGIN_LOCKOUT = timedelta(minutes=15)
+
+
 def authenticate(ctx, email: str, password: str) -> dict:
     user = ctx.db.one("SELECT * FROM users WHERE email = ?", ((email or "").strip().lower(),))
     if not user:
         crypto.hash_password("timing-equaliser")  # don't leak which emails exist via timing
         raise AuthError("invalid_credentials")
+    if user.get("login_locked_until") and user["login_locked_until"] > now_iso():
+        raise AuthError("account_temporarily_locked", 429)
     if not crypto.verify_password(password or "", user["password_hash"]):
+        register_login_failure(ctx, user)
         raise AuthError("invalid_credentials")
+    ctx.db.execute("UPDATE users SET login_failed = 0, login_locked_until = NULL WHERE id = ?", (user["id"],))
     return user
+
+
+def register_login_failure(ctx, user) -> None:
+    """Per-account lockout (in addition to per-IP rate limits) against distributed guessing."""
+    fails = (ctx.db.one("SELECT login_failed FROM users WHERE id = ?", (user["id"],)) or {}).get("login_failed", 0) + 1
+    until = None
+    if fails >= MAX_LOGIN_FAILS:
+        until = (datetime.now(timezone.utc) + LOGIN_LOCKOUT).replace(microsecond=0).isoformat()
+        fails = 0
+    ctx.db.execute("UPDATE users SET login_failed = ?, login_locked_until = ? WHERE id = ?", (fails, until, user["id"]))
+
+
+# ---- two-factor (TOTP) ----------------------------------------------------------------------
+def issue_mfa_token(ctx, user) -> str:
+    now = int(time.time())
+    return jwt.encode({"sub": user["id"], "tv": user["token_version"], "typ": "mfa", "iat": now, "exp": now + 300},
+                      ctx.config.jwt_secret, algorithm="HS256")
+
+
+def verify_second_factor(ctx, mfa_token: str, code: str) -> dict:
+    from . import totp
+    try:
+        p = jwt.decode(mfa_token or "", ctx.config.jwt_secret, algorithms=["HS256"], options={"require": ["exp", "sub"]})
+    except jwt.PyJWTError:
+        raise AuthError("mfa_expired") from None
+    user = ctx.db.one("SELECT * FROM users WHERE id = ?", (p.get("sub"),))
+    if p.get("typ") != "mfa" or not user or user["token_version"] != p.get("tv") or not user["totp_enabled"]:
+        raise AuthError("mfa_expired")
+    if user.get("login_locked_until") and user["login_locked_until"] > now_iso():
+        raise AuthError("account_temporarily_locked", 429)
+    secret = crypto.decrypt_text(user_dek(ctx, user), user["totp_secret_enc"], f"totp:{user['id']}")
+    code = (code or "").strip().lower()
+    if totp.verify(secret, code):
+        return user
+    # Recovery codes: single use, stored hashed.
+    import json as _json
+    hashes = _json.loads(user.get("recovery_codes_json") or "[]")
+    h = crypto.sha256_hex(code.encode())
+    if h in hashes:
+        hashes.remove(h)
+        ctx.db.execute("UPDATE users SET recovery_codes_json = ? WHERE id = ?", (_json.dumps(hashes), user["id"]))
+        return user
+    register_login_failure(ctx, user)
+    raise AuthError("invalid_code")
 
 
 def issue_access_token(ctx, user: dict) -> str:
@@ -129,5 +182,7 @@ def require_auth(fn):
             return jsonify(error="unauthorized"), 401
         g.user = user
         g.dek = user_dek(ctx, user)
+        from .vault import HEADER, hidden_categories
+        g.hidden_cats = hidden_categories(ctx, user, request.headers.get(HEADER))
         return fn(*args, **kwargs)
     return wrapper

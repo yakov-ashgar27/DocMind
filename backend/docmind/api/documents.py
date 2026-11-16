@@ -7,6 +7,7 @@ from flask import g, jsonify, request, send_file
 from ..security import crypto
 from ..security.audit import audit
 from ..security.auth import require_auth
+from ..security.vault import ensure_visible
 from ..services import bundles as bundlesvc
 from ..services import documents as docsvc
 from . import api, body, ctx, rate_limit, sign_link, verify_link
@@ -16,6 +17,7 @@ def _owned_or_404(doc_id):
     doc = docsvc.get_owned(ctx(), g.user["id"], doc_id)
     if not doc:
         raise docsvc.IngestError("not_found", 404)
+    ensure_visible(doc)
     return doc
 
 
@@ -93,6 +95,8 @@ def get_document(doc_id):
     doc = _owned_or_404(doc_id)
     text = crypto.decrypt_text(g.dek, doc["text_enc"], f"doctext:{doc_id}")
     dup = docsvc.get_owned(ctx(), g.user["id"], doc["duplicate_of"]) if doc["duplicate_of"] else None
+    if dup and dup["category_key"] in g.hidden_cats:
+        dup = None
     bundles = ctx().db.all("SELECT b.id, b.name FROM bundle_items i JOIN bundles b ON b.id = i.bundle_id "
                            "WHERE i.document_id = ? AND b.user_id = ?", (doc_id, g.user["id"]))
     return jsonify(document=docsvc.public(doc), text_excerpt=text[:4000], text_length=len(text),
@@ -180,14 +184,16 @@ def signed_download(token):
         mime, inline = "application/pdf", False
     elif p["k"] == "ics":
         from ..services.reminders import calendar_ics
-        data, name, mime, inline = calendar_ics(c, user, p["r"].get("ids") or None), "docmind-reminders.ics", "text/calendar", False
+        data, name, mime, inline = calendar_ics(c, user, p["r"].get("ids") or None, set(p["r"].get("x") or [])), "docmind-reminders.ics", "text/calendar", False
         audit(c, user["id"], "reminders.export")
     else:
         return jsonify(error="bad_link"), 400
     resp = send_file(io.BytesIO(data), mimetype=mime, as_attachment=not inline, download_name=name)
     resp.headers["Cache-Control"] = "no-store"
     if inline:
-        # Allow our own page to frame the preview; nothing else.
-        resp.headers["Content-Security-Policy"] = "default-src 'none'; img-src 'self'; style-src 'unsafe-inline'; frame-ancestors 'self'"
+        # Allow only our own page to frame the preview. PDFs need the browser's built-in viewer,
+        # which a `default-src 'none'` policy would block, so they get frame-ancestors only.
+        resp.headers["Content-Security-Policy"] = ("frame-ancestors 'self'" if mime == "application/pdf"
+                                                   else "default-src 'none'; img-src 'self'; style-src 'unsafe-inline'; frame-ancestors 'self'")
         resp.headers["X-Frame-Options"] = "SAMEORIGIN"
     return resp

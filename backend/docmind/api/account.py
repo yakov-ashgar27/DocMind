@@ -203,4 +203,52 @@ def reminders():
 def reminders_calendar_link():
     from . import sign_link
     ids = [str(i) for i in (body().get("document_ids") or [])][:200]
-    return jsonify(url=sign_link(g.user["id"], "ics", {"ids": ids}))
+    return jsonify(url=sign_link(g.user["id"], "ics", {"ids": ids, "x": sorted(g.hidden_cats)}))
+
+
+# ---- two-factor authentication -----------------------------------------------------------------
+@api.post("/me/2fa/setup")
+@require_auth
+def mfa_setup():
+    from ..security import totp
+    if not crypto.verify_password(body().get("password") or "", g.user["password_hash"]):
+        return jsonify(error="invalid_credentials"), 403
+    if g.user["totp_enabled"]:
+        return jsonify(error="mfa_already_enabled"), 409
+    secret = totp.new_secret()
+    ctx().db.execute("UPDATE users SET totp_secret_enc = ? WHERE id = ?",
+                     (crypto.encrypt_text(g.dek, secret, f"totp:{g.user['id']}"), g.user["id"]))
+    return jsonify(secret=secret, otpauth_uri=totp.otpauth_uri(secret, g.user["email"]))
+
+
+@api.post("/me/2fa/enable")
+@require_auth
+def mfa_enable():
+    from ..security import totp
+    if not g.user["totp_secret_enc"] or g.user["totp_enabled"]:
+        return jsonify(error="mfa_not_pending"), 409
+    secret = crypto.decrypt_text(g.dek, g.user["totp_secret_enc"], f"totp:{g.user['id']}")
+    if not totp.verify(secret, body().get("code")):
+        return jsonify(error="invalid_code"), 400
+    codes = totp.recovery_codes()
+    ctx().db.execute("UPDATE users SET totp_enabled = 1, recovery_codes_json = ? WHERE id = ?",
+                     (json.dumps([crypto.sha256_hex(c.encode()) for c in codes]), g.user["id"]))
+    audit(ctx(), g.user["id"], "auth.mfa_enabled")
+    return jsonify(recovery_codes=codes)
+
+
+@api.post("/me/2fa/disable")
+@require_auth
+def mfa_disable():
+    from ..security import totp
+    b = body()
+    if not crypto.verify_password(b.get("password") or "", g.user["password_hash"]):
+        return jsonify(error="invalid_credentials"), 403
+    if g.user["totp_enabled"]:
+        secret = crypto.decrypt_text(g.dek, g.user["totp_secret_enc"], f"totp:{g.user['id']}")
+        if not totp.verify(secret, b.get("code")):
+            return jsonify(error="invalid_code"), 400
+    ctx().db.execute("UPDATE users SET totp_enabled = 0, totp_secret_enc = NULL, recovery_codes_json = NULL WHERE id = ?",
+                     (g.user["id"],))
+    audit(ctx(), g.user["id"], "auth.mfa_disabled")
+    return jsonify(ok=True)

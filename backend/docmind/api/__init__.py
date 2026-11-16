@@ -8,6 +8,7 @@ from flask import Blueprint, current_app, jsonify, request
 
 from ..connectors.google import ConnectorError
 from ..security.auth import AuthError
+from ..security.vault import VaultError
 from ..services.bundles import BundleError
 from ..services.documents import IngestError
 from ..services.memory import MemoryError_
@@ -57,8 +58,8 @@ def verify_link(token: str) -> dict:
 
 
 def register(app):
-    from . import account, assistant, auth, bundles, connectors, documents, memory  # noqa: F401
+    from . import account, assistant, auth, bundles, connectors, documents, memory, vault  # noqa: F401
     app.register_blueprint(api)
 
-    for exc in (IngestError, BundleError, MemoryError_, AuthError, ConnectorError):
+    for exc in (IngestError, BundleError, MemoryError_, AuthError, ConnectorError, VaultError):
         app.register_error_handler(exc, lambda e: (jsonify(error=getattr(e, "code", str(e))), e.status))

@@ -61,6 +61,10 @@ def bundle_links(bid):
     """Signed links for each selected file — the client downloads them one by one as separate files."""
     bundle = bundlesvc.get(ctx(), g.user, bid)
     only = set(body().get("item_ids") or [])
+    for it in bundle["items"]:
+        if ((only and it["id"] in only) or (not only and it["selected"])) and it["document"] \
+                and it["document"]["category_key"] in g.hidden_cats:
+            return jsonify(error="vault_locked"), 423
     links = []
     for it in bundle["items"]:
         if (only and it["id"] not in only) or (not only and not it["selected"]):
@@ -74,5 +78,7 @@ def bundle_links(bid):
 @api.post("/bundles/<bid>/combined-link")
 @require_auth
 def combined_link(bid):
-    bundlesvc.get_row(ctx(), g.user, bid)
+    bundle = bundlesvc.get(ctx(), g.user, bid)
+    if any(it["selected"] and it["document"] and it["document"]["category_key"] in g.hidden_cats for it in bundle["items"]):
+        return jsonify(error="vault_locked"), 423
     return jsonify(url=sign_link(g.user["id"], "bundle_pdf", {"b": bid}))

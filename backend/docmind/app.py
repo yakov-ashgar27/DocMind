@@ -59,6 +59,19 @@ def create_app(overrides: dict | None = None) -> Flask:
     register(app)
 
     @app.after_request
+    def vault_redaction(resp):
+        """Single choke point: protected documents never leave the server while the vault is locked."""
+        from flask import g
+        hidden = getattr(g, "hidden_cats", None)
+        if hidden and resp.mimetype == "application/json":
+            import json as _json
+            from .security.vault import redact
+            data = resp.get_json(silent=True)
+            if data is not None:
+                resp.set_data(_json.dumps(redact(data, hidden), ensure_ascii=False))
+        return resp
+
+    @app.after_request
     def security_headers(resp):
         resp.headers["Content-Security-Policy"] = (
             "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' blob: data:; "

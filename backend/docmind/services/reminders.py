@@ -51,13 +51,15 @@ def _fold(line: str) -> str:
     return "\r\n ".join(parts)
 
 
-def calendar_ics(ctx, user, doc_ids: list[str] | None = None) -> bytes:
+def calendar_ics(ctx, user, doc_ids: list[str] | None = None, exclude_categories: set[str] | None = None) -> bytes:
     lang = user.get("locale") or "he"
     lead = lead_days(user)
     sql = "SELECT * FROM documents WHERE user_id = ? AND archived = 0 AND expiry_date IS NOT NULL AND duplicate_of IS NULL"
     rows = ctx.db.all(sql, (user["id"],))
     if doc_ids:
         rows = [r for r in rows if r["id"] in set(doc_ids)]
+    if exclude_categories:
+        rows = [r for r in rows if r["category_key"] not in exclude_categories]
     stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
     lines = ["BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//DocMind//Document reminders//HE", "CALSCALE:GREGORIAN",
              "METHOD:PUBLISH", "X-WR-CALNAME:DocMind"]

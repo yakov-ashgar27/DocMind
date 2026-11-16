@@ -245,7 +245,7 @@ def import_whatsapp_export(ctx, user, dek, zip_bytes: bytes) -> dict:
     try:
         zf = zipfile.ZipFile(io.BytesIO(zip_bytes))
     except zipfile.BadZipFile:
-        raise IngestError("invalid_zip")
+        raise IngestError("invalid_zip") from None
     members = [m for m in zf.infolist() if not m.is_dir() and WA_MEDIA.search(m.filename)]
     if len(members) > MAX_ZIP_MEMBERS or sum(m.file_size for m in members) > MAX_ZIP_TOTAL:
         raise IngestError("zip_too_large", 413)

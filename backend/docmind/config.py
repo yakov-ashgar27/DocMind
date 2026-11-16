@@ -61,7 +61,7 @@ def _load_key(env_name: str, dev_file: Path, env: str) -> bytes:
     dev_file.write_text(base64.urlsafe_b64encode(key).decode())
     os.chmod(dev_file, 0o600)
     warnings.warn(f"{env_name} not set: generated a development key at {dev_file}. "
-                  "Never use this in production.")
+                  "Never use this in production.", stacklevel=2)
     return key
 
 

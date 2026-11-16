@@ -18,6 +18,8 @@ import time
 from datetime import datetime, timedelta, timezone
 from urllib.parse import urlencode
 
+import logging
+
 import requests
 
 from ..db import new_id, now_iso
@@ -28,7 +30,7 @@ from ..services import classifier
 from .base import Availability, Hit, LibraryConnector
 
 AUTH_URL = "https://accounts.google.com/o/oauth2/v2/auth"
-TOKEN_URL = "https://oauth2.googleapis.com/token"
+TOKEN_URL = "https://oauth2.googleapis.com/token"  # noqa: S105 (endpoint URL, not a secret)
 REVOKE_URL = "https://oauth2.googleapis.com/revoke"
 GMAIL = "https://gmail.googleapis.com/gmail/v1/users/me"
 DRIVE = "https://www.googleapis.com/drive/v3"
@@ -37,6 +39,7 @@ SCOPES = {
     "gdrive": "openid email https://www.googleapis.com/auth/drive.readonly",
 }
 HTTP_TIMEOUT = 20
+log = logging.getLogger(__name__)
 
 
 class ConnectorError(Exception):
@@ -121,8 +124,8 @@ def disconnect(ctx, user, dek, kind: str) -> None:
         tok = json.loads(crypto.decrypt_text(dek, row["tokens_enc"], f"oauth:{user['id']}:{kind}"))
         requests.post(REVOKE_URL, params={"token": tok.get("refresh_token") or tok.get("access_token")},
                       timeout=HTTP_TIMEOUT)
-    except Exception:
-        pass  # local deletion below still removes our copy of the credentials
+    except Exception as e:  # local deletion below still removes our copy of the credentials
+        log.warning("token revoke failed for %s: %s", kind, e)
     ctx.db.execute("DELETE FROM connected_sources WHERE id = ?", (row["id"],))
     ctx.db.execute("DELETE FROM external_refs WHERE user_id = ? AND kind = ?", (user["id"], kind))
     audit(ctx, user["id"], "connector.disconnect", kind)

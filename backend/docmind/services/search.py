@@ -68,12 +68,18 @@ class SearchIndex:
             self._cache[user_id] = built
         return built
 
-    def search(self, user_id: str, dek: bytes, query: str, limit: int = 20, min_score: float = 0.08) -> list[tuple[dict, float]]:
+    def search(self, user_id: str, dek: bytes, query: str, limit: int = 20, min_score: float = 0.08,
+               exclude_categories: set[str] | None = None) -> list[tuple[dict, float]]:
         docs, vec, matrix = self._get(user_id, dek)
         if not docs or not query.strip():
             return []
+        if exclude_categories is None:
+            from ..security.vault import current_hidden
+            exclude_categories = current_hidden()
         sims = cosine_similarity(vec.transform([_normalise(query)]), matrix)[0]
-        ranked = sorted(zip(docs, sims), key=lambda x: -x[1])
+        ranked = sorted(zip(docs, sims, strict=True), key=lambda x: -x[1])
+        # Content of protected documents must not influence results while the vault is locked.
+        ranked = [(d, s) for d, s in ranked if d["category_key"] not in exclude_categories]
         return [(d, float(s)) for d, s in ranked[:limit] if s >= min_score]
 
     def nearest_labelled(self, user_id: str, dek: bytes, text: str, filename: str) -> tuple[str, float] | None:
@@ -81,7 +87,7 @@ class SearchIndex:
         labelled = self.db.all("SELECT id, doc_type, text_enc FROM documents WHERE user_id = ? AND doc_type_source = 'user' "
                                "AND status = 'ready' AND archived = 0 ORDER BY updated_at DESC LIMIT 500", (user_id,))
         texts = [_normalise(crypto.decrypt_text(dek, d["text_enc"], f"doctext:{d['id']}")) for d in labelled]
-        pairs = [(d, t) for d, t in zip(labelled, texts) if len(t) >= 10]
+        pairs = [(d, t) for d, t in zip(labelled, texts, strict=True) if len(t) >= 10]
         if not pairs or len(text.strip()) < 10:
             return None
         vec = TfidfVectorizer(analyzer="char_wb", ngram_range=(2, 4), sublinear_tf=True)

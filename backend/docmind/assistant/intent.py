@@ -76,14 +76,14 @@ def parse(text: str, fallback_lang: str = "he") -> Intent:
     norm = _norm(text)
     it = Intent(lang=lang, free_text=text.strip())
     masked = norm
-    for alias, pk, rx in _PROC_TABLE:
+    for _alias, pk, rx in _PROC_TABLE:
         m = rx.search(masked)
         if m:
             it.process_key = pk
             masked = masked[:m.start()] + " " * (m.end() - m.start()) + masked[m.end():]
             break
     found: list[tuple[int, str]] = []
-    for alias, dt, rx in _ALIAS_TABLE:
+    for _alias, dt, rx in _ALIAS_TABLE:
         for m in rx.finditer(masked):
             found.append((m.start(), dt))
             masked = masked[:m.start()] + " " * (m.end() - m.start()) + masked[m.end():]
@@ -115,6 +115,6 @@ def parse(text: str, fallback_lang: str = "he") -> Intent:
 
 def _is_only_doc_names(s: str) -> bool:
     n = _norm(s)
-    for alias, _, rx in _ALIAS_TABLE:
+    for _alias, _, rx in _ALIAS_TABLE:
         n = rx.sub(" ", n)
     return not re.sub(r"[\s,.&]|\band\b|\bmy\b|ו", "", n)

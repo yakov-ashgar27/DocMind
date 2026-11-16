@@ -149,3 +149,20 @@ def test_find_during_task_does_not_touch_checklist(library):
     assert not [b for b in r["blocks"] if b["type"] == "proposal"]
     r = s.say("also my passport")
     assert [b for b in r["blocks"] if b["type"] == "proposal"][0]["proposal"]["kind"] == "update_checklist"
+
+
+def test_catalog_is_consistent():
+    from docmind.knowledge.catalog import ACQUISITION, DOC_TYPES, PROCESSES, REQUEST_ALIASES
+    assert set(DOC_TYPES) == set(ACQUISITION) == set(REQUEST_ALIASES)
+    for p in PROCESSES.values():
+        assert p["triggers"] and all(d in DOC_TYPES for d in p["suggested"])
+    for a in ACQUISITION.values():  # only the one official domain we are sure about
+        assert a.get("url") in (None, "https://www.gov.il")
+        assert a["he"]["source"] and a["en"]["how"]
+
+
+def test_new_processes_and_types_parse():
+    assert parse("אני צריך מסמכים לדמי אבטלה").process_key == "unemployment_benefits"
+    assert parse("I need documents for a mortgage").process_key == "mortgage"
+    assert parse("מה צריך להנחה בארנונה").process_key == "arnona_discount"
+    assert parse("find my vehicle license and marriage certificate").doc_types == ["vehicle_license", "marriage_certificate"]
