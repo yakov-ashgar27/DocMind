@@ -1,4 +1,4 @@
-import { api, logout, triggerDownload } from "../api.js";
+import { api, lockVault, logout, triggerDownload, vaultUnlocked } from "../api.js";
 import { uploadButtons } from "../components.js";
 import { fmtDate, getLang, L, setLang, t, errText } from "../i18n.js";
 import { navigate, render } from "../router.js";
@@ -60,12 +60,25 @@ export async function accountsView(root, params, query) {
 
 export async function categoriesView(root) {
   const cats = await loadCategories(true);
+  const v = await api("/vault");
+  const locked = new Set(v.locked_categories);
+  const toggleLock = async (key, e) => {
+    e.stopPropagation();
+    const next = new Set(locked);
+    next.has(key) ? next.delete(key) : next.add(key);
+    try { await api("/vault/categories", { method: "PUT", body: { categories: [...next] } }); navigate("/categories?r=" + Date.now()); }
+    catch (err) { if (err.code !== "vault_locked") toast(errText(err.code), "bad"); }
+  };
   const input = h("input", { placeholder: t("new_category") });
   root.append(h("div", { class: "page-head" }, h("h1", {}, t("categories"))),
+    !v.has_pin ? h("button", { class: "card notice", onclick: () => navigate("/settings") }, icon("lock", 18), h("span", {}, t("set_pin")), icon("chevron", 16)) : null,
     h("div", { class: "cat-grid" }, cats.map((c) => h("div", { class: "cat", role: "button", tabindex: 0,
       onclick: () => navigate(`/library?category=${encodeURIComponent(c.key)}`),
       onkeydown: (e) => { if (e.key === "Enter") navigate(`/library?category=${encodeURIComponent(c.key)}`); } },
       icon(c.icon, 22), h("strong", {}, L(c.name)), h("span", { class: "meta" }, String(c.count)),
+      v.has_pin ? h("button", { class: "lock-toggle" + (locked.has(c.key) ? " on" : ""), "aria-pressed": locked.has(c.key) ? "true" : "false",
+        "aria-label": `${t("protected")}: ${L(c.name)}`, onclick: (e) => toggleLock(c.key, e) },
+        icon(locked.has(c.key) ? "lock" : "unlock", 14), locked.has(c.key) ? t("protected") : "") : null,
       c.is_custom ? h("button", { class: "icon-btn cat-del", "aria-label": t("delete"), onclick: async (e) => {
         e.stopPropagation();
         if (await confirmDialog(`${t("delete")}: ${L(c.name)}?`)) { await api(`/categories/${encodeURIComponent(c.key)}`, { method: "DELETE" }); navigate("/categories?r=" + Date.now()); }
@@ -103,6 +116,8 @@ export async function settingsView(root) {
       setting(t("reminder_days"), t("calendar_hint"), h("select", { class: "compact", onchange: (e) => update({ reminder_days: Number(e.target.value) }) },
         [14, 30, 60, 90].map((n) => h("option", { value: n, selected: (s.reminder_days || 60) === n }, t("days", { n }))))),
       setting(t("shared"), t("shared_desc"), toggle("shared_learning_opt_in", s.shared_learning_opt_in, { disabled: !meta.shared_learning_available }))),
+    await vaultSection(),
+    mfaSection(user),
     h("section", { class: "card settings" }, h("h2", {}, t("security")),
       h("div", { class: "row wrap" },
         h("button", { class: "btn ghost sm", onclick: changePassword }, t("change_pw")),
@@ -146,4 +161,107 @@ function deleteAccount() {
     try { await api("/me", { method: "DELETE", body: { password: pw.value } }); s.close(); await logout(); location.reload(); }
     catch (err) { toast(errText(err.code), "bad"); }
   } }, h("p", {}, t("confirm_delete_account")), pw, h("button", { class: "btn danger" }, t("delete_account"))));
+}
+
+
+async function vaultSection() {
+  const v = await api("/vault");
+  const box = h("section", { class: "card settings" }, h("h2", {}, icon("lock", 16), " ", t("vault")),
+    h("p", { class: "meta muted" }, t("vault_desc")));
+  if (!v.has_pin) {
+    box.append(h("button", { class: "btn primary", onclick: () => pinDialog(false) }, icon("lock", 16), t("set_pin")));
+    return box;
+  }
+  const cats = await loadCategories();
+  box.append(h("div", { class: "setting" }, h("div", { class: "doc-main" }, h("div", { class: "doc-title" }, t("protected_folders")),
+    h("div", { class: "meta" }, cats.filter((c) => v.locked_categories.includes(c.key)).map((c) => L(c.name)).join(" · ") || "—")),
+    h("button", { class: "btn ghost sm", onclick: () => navigate("/categories") }, t("edit"))));
+  box.append(h("div", { class: "row wrap" },
+    vaultUnlocked() ? h("button", { class: "btn ghost sm", onclick: () => { lockVault(); render(); } }, icon("lock", 15), t("lock_now")) : null,
+    h("button", { class: "btn ghost sm", onclick: () => pinDialog(true) }, t("change_pin")),
+    h("button", { class: "btn ghost sm", onclick: removePin }, t("remove_pin"))));
+  return box;
+}
+
+function pinDialog(changing) {
+  const pw = h("input", { type: "password", placeholder: t("password"), autocomplete: "current-password", required: true });
+  const p1 = h("input", { type: "password", inputmode: "numeric", placeholder: t("pin"), autocomplete: "new-password", required: true });
+  const p2 = h("input", { type: "password", inputmode: "numeric", placeholder: t("pin_confirm"), autocomplete: "new-password", required: true });
+  const err = h("p", { class: "form-error", role: "alert" });
+  const s = sheet(changing ? t("change_pin") : t("set_pin"), h("form", { class: "form", onsubmit: async (e) => {
+    e.preventDefault(); err.textContent = "";
+    if (p1.value !== p2.value) { err.textContent = t("pin_mismatch"); return; }
+    try {
+      await api("/vault/pin", { method: "POST", body: { password: pw.value, pin: p1.value } });
+      lockVault(); s.close(); toast(t("saved"), "ok"); render();
+    } catch (ex) { err.textContent = errText(ex.code); }
+  } }, h("p", { class: "meta muted" }, t("vault_desc")), pw, p1, p2, err, h("button", { class: "btn primary" }, t("save"))));
+}
+
+function removePin() {
+  const pw = h("input", { type: "password", placeholder: t("password"), autocomplete: "current-password", required: true });
+  const err = h("p", { class: "form-error", role: "alert" });
+  const s = sheet(t("remove_pin"), h("form", { class: "form", onsubmit: async (e) => {
+    e.preventDefault();
+    try { await api("/vault/pin", { method: "DELETE", body: { password: pw.value } }); lockVault(); s.close(); render(); }
+    catch (ex) { err.textContent = errText(ex.code); }
+  } }, pw, err, h("button", { class: "btn danger" }, t("remove_pin"))));
+}
+
+function mfaSection(user) {
+  const box = h("section", { class: "card settings" }, h("h2", {}, icon("shield", 16), " ", t("mfa")),
+    h("p", { class: "meta muted" }, t("mfa_desc")));
+  if (user.mfa_enabled) {
+    box.append(h("div", { class: "row between" }, h("span", { class: "badge ok" }, icon("check", 13), t("mfa_on")),
+      h("button", { class: "btn ghost sm", onclick: disableMfa }, t("disable"))));
+  } else {
+    box.append(h("button", { class: "btn primary", onclick: enableMfa }, icon("shield", 16), t("enable")));
+  }
+  return box;
+}
+
+function enableMfa() {
+  const pw = h("input", { type: "password", placeholder: t("password"), autocomplete: "current-password", required: true });
+  const err = h("p", { class: "form-error", role: "alert" });
+  const body = h("div", { class: "stack" });
+  const s = sheet(t("mfa"), body);
+  body.append(h("form", { class: "form", onsubmit: async (e) => {
+    e.preventDefault();
+    try {
+      const setup = await api("/me/2fa/setup", { method: "POST", body: { password: pw.value } });
+      step2(setup);
+    } catch (ex) { err.textContent = errText(ex.code); }
+  } }, pw, err, h("button", { class: "btn primary" }, t("enable"))));
+
+  function step2(setup) {
+    const code = h("input", { inputmode: "numeric", autocomplete: "one-time-code", class: "pin-input", required: true, "aria-label": t("code") });
+    const err2 = h("p", { class: "form-error", role: "alert" });
+    clear(body).append(
+      h("p", {}, t("mfa_step1")),
+      h("a", { class: "btn ghost", href: setup.otpauth_uri }, icon("link", 15), t("open_auth_app")),
+      h("p", { class: "meta muted" }, t("setup_key")),
+      h("code", { class: "secret", dir: "ltr" }, setup.secret.replace(/(.{4})/g, "$1 ").trim()),
+      h("p", {}, t("mfa_step2")),
+      h("form", { class: "form", onsubmit: async (e) => {
+        e.preventDefault();
+        try {
+          const r = await api("/me/2fa/enable", { method: "POST", body: { code: code.value } });
+          clear(body).append(h("p", {}, t("recovery")),
+            h("div", { class: "recovery", dir: "ltr" }, r.recovery_codes.map((c) => h("code", {}, c))),
+            h("button", { class: "btn primary", onclick: () => { s.close(); render(); } }, t("done")));
+        } catch (ex) { err2.textContent = errText(ex.code); }
+      } }, code, err2, h("button", { class: "btn primary" }, t("verify"))));
+    code.focus();
+  }
+}
+
+function disableMfa() {
+  const pw = h("input", { type: "password", placeholder: t("password"), autocomplete: "current-password", required: true });
+  const code = h("input", { inputmode: "numeric", placeholder: t("code"), autocomplete: "one-time-code", required: true });
+  const err = h("p", { class: "form-error", role: "alert" });
+  const s = sheet(t("mfa"), h("form", { class: "form", onsubmit: async (e) => {
+    e.preventDefault();
+    try { await api("/me/2fa/disable", { method: "POST", body: { password: pw.value, code: code.value } }); s.close(); render(); }
+    catch (ex) { err.textContent = errText(ex.code); }
+  } }, pw, code, err, h("button", { class: "btn danger" }, t("disable"))));
 }

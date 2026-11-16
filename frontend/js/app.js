@@ -1,8 +1,9 @@
-import { authenticate, refreshSession, setUnauthorizedHandler } from "./api.js";
+import { api, authenticate, refreshSession, setTokenFromSession, setUnauthorizedHandler, setVaultHandler } from "./api.js";
+import { mountVaultIndicator, promptUnlock } from "./vault.js";
 import { errText, getLang, setLang, t } from "./i18n.js";
 import { current, navigate, onRender, route } from "./router.js";
 import { loadCategories, loadMeta, store } from "./store.js";
-import { clear, h, icon, spinner } from "./ui.js";
+import { append, clear, h, icon, spinner } from "./ui.js";
 import { assistantView } from "./views/assistant.js";
 import { bundleView, bundlesView } from "./views/bundles.js";
 import { homeView } from "./views/home.js";
@@ -46,6 +47,8 @@ async function renderRoute() {
   const main = shell(r.tab);
   main.append(h("div", { class: "loading" }, spinner()));
   const content = h("div", { class: "content" });
+  // Views may pass optional (null/false) children; never let them render as text like "null".
+  content.append = (...children) => append(content, children);
   try {
     await r.view(content, r.params, r.query);
     if (seq !== renderSeq) return;
@@ -69,8 +72,10 @@ function authScreen(mode = "login") {
     e.preventDefault();
     err.textContent = ""; submit.disabled = true;
     try {
-      store.user = await authenticate(mode, mode === "login" ? { email: email.value, password: pw.value }
+      const res = await authenticate(mode, mode === "login" ? { email: email.value, password: pw.value }
         : { email: email.value, password: pw.value, display_name: name.value, locale: getLang() });
+      if (res.mfa_required) return mfaScreen(res.mfa_token);
+      store.user = res;
       await boot(true);
     } catch (ex) { err.textContent = errText(ex.code); submit.disabled = false; }
   } },
@@ -87,6 +92,26 @@ function authScreen(mode = "login") {
   (mode === "register" ? name : email).focus();
 }
 
+function mfaScreen(mfaToken) {
+  const err = h("p", { class: "form-error", role: "alert" });
+  const code = h("input", { inputmode: "numeric", autocomplete: "one-time-code", class: "pin-input", required: true, "aria-label": t("code") });
+  const btn = h("button", { class: "btn primary block", type: "submit" }, t("verify"));
+  clear(app).append(h("div", { class: "auth" }, h("div", { class: "auth-card" },
+    h("div", { class: "auth-brand" }, h("span", { class: "logo lg" }, "D"), h("h1", {}, t("mfa"))),
+    h("p", { class: "lead" }, t("mfa_login")),
+    h("form", { class: "form", onsubmit: async (e) => {
+      e.preventDefault(); btn.disabled = true; err.textContent = "";
+      try {
+        store.user = await setTokenFromSession(await api("/auth/mfa", { method: "POST", body: { mfa_token: mfaToken, code: code.value } }));
+        await boot(true);
+      } catch (ex) {
+        err.textContent = errText(ex.code); btn.disabled = false; code.value = "";
+        if (ex.code === "mfa_expired") setTimeout(() => authScreen(), 1500);
+      }
+    } }, code, err, btn))));
+  code.focus();
+}
+
 async function boot(fresh = false) {
   if (!fresh) store.user = await refreshSession();
   if (!store.user) return authScreen();
@@ -97,6 +122,8 @@ async function boot(fresh = false) {
 }
 
 setUnauthorizedHandler(() => { store.user = null; authScreen(); });
+setVaultHandler(() => promptUnlock());
+mountVaultIndicator();
 app.replaceChildren(h("div", { class: "loading full" }, spinner()));
 boot();
 

@@ -119,7 +119,12 @@ function requirementRow(r) {
   const head = h("div", { class: "req-head" }, h("span", { class: "req-label" }, r.requirement.label), statusPill(r.status));
   row.append(head);
   const best = r.best;
-  if (best?.document) {
+  if (best?.document?.locked) {
+    row.append(h("button", { class: "req-doc locked-row", onclick: () => import("../vault.js").then((v) => v.unlockAndRefresh()) },
+      thumb(best.document, "sm"),
+      h("div", { class: "doc-main" }, h("div", { class: "doc-title" }, t("locked_doc")), h("div", { class: "meta" }, t("locked_hint"))),
+      icon("unlock", 18)));
+  } else if (best?.document) {
     const d = best.document;
     row.append(h("div", { class: "req-doc" },
       thumb(d, "sm"),
@@ -161,7 +166,7 @@ function requirementRow(r) {
     row.append(h("div", { class: "meta muted" }, t("previously_found", { src: sourceLabel(r.previously_found_in.source) })));
   }
   if (r.alternatives?.length) {
-    const alts = r.alternatives.filter((a) => a.document);
+    const alts = r.alternatives.filter((a) => a.document && !a.document.locked);
     if (alts.length) {
       const det = h("details", { class: "alts" }, h("summary", {}, `${t("alternatives")} (${alts.length})`),
         alts.map((a) => h("button", { class: "alt", onclick: () => navigate(`/doc/${a.document.id}`) },

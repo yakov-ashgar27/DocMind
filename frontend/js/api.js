@@ -2,6 +2,23 @@
 let accessToken = null;
 let refreshing = null;
 let onUnauthorized = () => {};
+let vaultToken = null;
+let vaultTimer = null;
+let onVaultLocked = async () => false;
+const vaultListeners = new Set();
+
+export function setVaultHandler(fn) { onVaultLocked = fn; }
+export function onVaultChange(fn) { vaultListeners.add(fn); return () => vaultListeners.delete(fn); }
+export function vaultUnlocked() { return !!vaultToken; }
+export function setVaultToken(token, ttl) {
+  vaultToken = token;
+  clearTimeout(vaultTimer);
+  if (token) vaultTimer = setTimeout(() => lockVault(), ttl * 1000);
+  vaultListeners.forEach((f) => f(!!token));
+}
+export function lockVault() { if (vaultToken) setVaultToken(null); }
+// Lock the vault as soon as the app goes to the background.
+document.addEventListener("visibilitychange", () => { if (document.visibilityState === "hidden") lockVault(); });
 
 export class ApiError extends Error {
   constructor(code, status, data) { super(code); this.code = code; this.status = status; this.data = data; }
@@ -40,6 +57,7 @@ export async function api(path, { method = "GET", body, form, query, raw } = {},
   }
   const headers = {};
   if (accessToken) headers.Authorization = "Bearer " + accessToken;
+  if (vaultToken) headers["X-Vault-Token"] = vaultToken;
   let payload;
   if (form) payload = form;
   else if (body !== undefined) { headers["Content-Type"] = "application/json"; payload = JSON.stringify(body); }
@@ -49,6 +67,10 @@ export async function api(path, { method = "GET", body, form, query, raw } = {},
     if (user) return api(path, { method, body, form, query, raw }, true);
     onUnauthorized();
     throw new ApiError("unauthorized", 401);
+  }
+  if (r.status === 423 && !retried) {
+    if (await onVaultLocked()) return api(path, { method, body, form, query, raw }, true);
+    throw new ApiError("vault_locked", 423);
   }
   if (raw) {
     if (!r.ok) throw new ApiError("http_" + r.status, r.status);
@@ -61,6 +83,13 @@ export async function api(path, { method = "GET", body, form, query, raw } = {},
 
 export async function authenticate(kind, body) {
   const data = await api(`/auth/${kind}`, { method: "POST", body });
+  if (data.mfa_required) return { mfa_required: true, mfa_token: data.mfa_token };
+  accessToken = data.access_token;
+  scheduleRefresh(data.expires_in);
+  return data.user;
+}
+
+export function setTokenFromSession(data) {
   accessToken = data.access_token;
   scheduleRefresh(data.expires_in);
   return data.user;
@@ -69,6 +98,7 @@ export async function authenticate(kind, body) {
 export async function logout() {
   await api("/auth/logout", { method: "POST" }).catch(() => {});
   accessToken = null;
+  lockVault();
   clearTimeout(timer);
 }
 

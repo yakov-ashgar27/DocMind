@@ -84,7 +84,10 @@ export async function bundleView(root, params) {
     const check = h("input", { type: "checkbox", checked: it.selected && !!d?.is_local, disabled: !d?.is_local, "aria-label": it.label,
       onchange: () => patch({ selected: check.checked }) });
     const row = h("div", { class: "bundle-item" + (d ? "" : " missing") }, check);
-    if (d) {
+    if (d?.locked) {
+      row.append(thumb(d, "sm"), h("div", { class: "doc-main" }, h("div", { class: "req-label" }, it.label),
+        h("button", { class: "linkish", onclick: () => import("../vault.js").then((v) => v.unlockAndRefresh()) }, icon("lock", 14), " ", t("locked_hint"))));
+    } else if (d) {
       const fname = h("input", { class: "fname", dir: "ltr", value: it.download_filename, "aria-label": t("rename_file"),
         onchange: () => patch({ custom_filename: fname.value }) });
       row.append(thumb(d, "sm"), h("div", { class: "doc-main" },

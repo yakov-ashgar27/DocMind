@@ -12,6 +12,11 @@ Authentication, upload, encrypted library, OCR (he+en), classification, natural-
 - Smarter contextual suggestions, such as "your last application also used a previous scholarship approval".
 - ✅ Expiry reminders (dashboard + .ics calendar export). Next: web push notifications (free, VAPID).
 
+## Security options for later
+- An optional PIN-derived encryption layer for vault documents (trade-off: their content would not be searchable while locked).
+- Web push notifications (free, VAPID) for expiry reminders.
+- Biometric unlock (WebAuthn / passkeys) for the vault on phones.
+
 ## Stage 4
 - Enable shared learning after a privacy review (k-anonymity is already in place; consider adding differential-privacy noise).
 - More providers (OneDrive, Dropbox, iCloud via share).

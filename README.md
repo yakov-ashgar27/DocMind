@@ -12,10 +12,12 @@ DocMind is a working Stage 1 product. It is a mobile-first web app (installable 
 | Encrypted storage: AES-256-GCM per-file keys and per-user data keys (envelope encryption); OCR text and chat history encrypted too; crypto-shredding on delete | ✅ |
 | Upload of PDF, JPG, PNG, WEBP, TIFF and TXT, with magic-byte sniffing (client MIME type ignored) | ✅ |
 | On-device OCR, Hebrew and English (Tesseract), rotation retry, and OCR for scanned PDFs | ✅ |
-| Classification into 24 document types and 12 categories, including Israeli ID check digit, IBAN and passport MRZ signals | ✅ |
+| Classification into 30 document types and 12 categories (plus custom ones), with 13 common Israeli processes, including Israeli ID check digit, IBAN and passport MRZ signals | ✅ |
 | Issuer, document date and expiry extraction; "may be outdated" flags | ✅ |
 | Smart names for meaningless filenames (`IMG_20261115_132411.jpg` becomes "תעודת זהות") | ✅ |
 | Personal classifier: a document you relabel teaches it about similar documents | ✅ |
+| **Vault:** PIN-protected folders (identity, finance and medical by default, configurable), hidden in every response until unlocked; auto-lock after 5 minutes or when the app is left | ✅ |
+| **Two-step verification** (Authenticator app, recovery codes), per-account lockout | ✅ |
 | Exact and near duplicate detection; nothing is ever deleted automatically | ✅ |
 | Natural-language and content search (character n-gram TF-IDF, robust to Hebrew prefixes and OCR noise), with filters for category, type, source, issuer, dates and tags | ✅ |
 | Hebrew/English assistant: task detection, "which documents were required?", search of every source, statuses, official sources for missing documents | ✅ |

@@ -11,6 +11,7 @@ const SOURCE_LABEL = {
 export const sourceLabel = (k) => L(SOURCE_LABEL[k]) || k;
 
 export function thumb(doc, size = "md") {
+  if (doc.locked) return h("div", { class: `thumb ${size} locked` }, icon("lock", 20));
   const box = h("div", { class: `thumb ${size}` }, icon(doc.mime_type === "application/pdf" ? "doc" : "image", 22));
   if (doc.status === "ready" && doc.is_local !== false) {
     thumbUrl(doc.id).then((u) => {
@@ -38,7 +39,18 @@ export function docMeta(doc) {
   return h("div", { class: "meta" }, icon(SOURCE_ICON[doc.source_kind] || "doc", 14), bits.join(" · "));
 }
 
+export function lockedCard(doc) {
+  const cat = categoryOf(doc.category_key);
+  return h("button", { class: "doc-card locked", type: "button", onclick: () => import("./vault.js").then((v) => v.unlockAndRefresh()) },
+    thumb(doc),
+    h("div", { class: "doc-main" },
+      h("div", { class: "doc-title" }, t("locked_doc")),
+      h("div", { class: "meta" }, icon("lock", 13), [cat ? L(cat.name) : "", t("locked_hint")].filter(Boolean).join(" · "))),
+    icon("unlock", 18));
+}
+
 export function docCard(doc, { onClick, extra } = {}) {
+  if (doc.locked) return lockedCard(doc);
   const badges = [freshnessBadge(doc.freshness)];
   if (doc.duplicate_of) badges.push(h("span", { class: "badge warn" }, t("k_duplicate")));
   if (doc.status === "ready" && doc.doc_type === "unknown") badges.push(h("span", { class: "badge" }, t("k_unclassified")));

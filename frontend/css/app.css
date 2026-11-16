@@ -311,3 +311,27 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--b
 .thumb.warn { background: var(--warn-bg); color: var(--warn); border-color: transparent; }
 .thumb.bad { background: var(--bad-bg); color: var(--bad); border-color: transparent; }
 select.compact { width: auto; min-width: 110px; }
+
+/* ---------- vault & 2FA ---------- */
+.thumb.locked, .doc-card.locked .thumb { background: #eef0f6; color: var(--brand); border-color: #dfe3ee; }
+.doc-card.locked { background: #f7f8fb; }
+.doc-card.locked .doc-title { color: var(--brand); }
+.req-doc.locked-row { width: 100%; border: 1px dashed #cfd5e6; background: #f7f8fb; border-radius: 12px; padding: 8px; cursor: pointer; text-align: start; }
+.vault-pill { position: fixed; z-index: 40; inset-block-end: calc(var(--nav-h) + var(--safe-b) + 76px); inset-inline-start: 50%; transform: translateX(-50%);
+  display: flex; align-items: center; gap: 6px; padding: 6px 6px 6px 12px; padding-inline: 12px 6px; border-radius: 99px;
+  background: var(--brand); color: #fff; font-size: 13px; font-weight: 600; white-space: nowrap; box-shadow: 0 6px 20px rgba(20,33,61,.25); }
+.vault-pill button { display: inline-flex; align-items: center; gap: 4px; border: 0; border-radius: 99px; padding: 5px 10px; background: rgba(255,255,255,.16); color: #fff; cursor: pointer; font-weight: 600; }
+.vault-mark { display: grid; place-items: center; width: 64px; height: 64px; margin: 0 auto; border-radius: 20px; background: var(--brand); color: #fff; }
+.pin-input { text-align: center; font-size: 26px !important; letter-spacing: .4em; direction: ltr; }
+.form.center { text-align: center; }
+.lock-toggle { position: absolute; inset-block-end: 10px; inset-inline-end: 10px; display: inline-flex; align-items: center; gap: 4px;
+  border: 1px solid var(--line); background: var(--surface); color: var(--muted); border-radius: 99px; padding: 3px 8px; font-size: 11.5px; font-weight: 650; cursor: pointer; }
+.lock-toggle.on { background: var(--brand); color: #fff; border-color: var(--brand); }
+.cat { padding-block-end: 40px; }
+.secret { display: block; padding: 12px; background: var(--surface-2); border-radius: 10px; font-size: 15px; letter-spacing: .05em; word-break: break-all; text-align: center; }
+.recovery { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.recovery code { padding: 8px; background: var(--surface-2); border-radius: 8px; text-align: center; font-size: 14px; }
+.settings h2 { display: flex; align-items: center; gap: 4px; }
+[dir="rtl"] .vault-pill { transform: translateX(50%); }
+@media (min-width: 960px) { .vault-pill { inset-block-end: auto; inset-block-start: 14px; inset-inline-start: auto; inset-inline-end: 20px; transform: none !important; } }
+.page-chat ~ .vault-pill, body:has(.page-chat) .vault-pill { inset-block-end: calc(var(--nav-h) + var(--safe-b) + 84px); }
