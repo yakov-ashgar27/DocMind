@@ -2,7 +2,7 @@
 
 [![Open in GitHub Codespaces](https://github.com/codespaces/badge.svg)](https://codespaces.new/yakov-ashgar27/DocMind)
 
-🌐 **Website:** https://yakov-ashgar27.github.io/DocMind/ · 🤖 **Android app (APK):** https://github.com/yakov-ashgar27/DocMind/releases/download/android-latest/DocMind.apk · 📱 **Web app (iPhone/any phone):** https://yakov-ashgar27.github.io/DocMind/app/
+🌐 **Website:** https://yakov-ashgar27.github.io/DocMind/ · 🤖 **Android app (APK):** https://yakov-ashgar27.github.io/DocMind/DocMind.apk (mirror: [GitHub release](https://github.com/yakov-ashgar27/DocMind/releases/download/android-latest/DocMind.apk)) · 📱 **Web app (iPhone/any phone):** https://yakov-ashgar27.github.io/DocMind/app/
 
 ## Two editions
 

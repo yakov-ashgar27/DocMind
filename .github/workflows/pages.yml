@@ -4,6 +4,9 @@ on:
     branches: [main]
     paths: ["docs/**", "mobile/**", ".github/workflows/pages.yml"]
   workflow_dispatch:
+  workflow_run:            # re-publish the site after each Android build, so the APK mirror is fresh
+    workflows: ["Android app"]
+    types: [completed]
 permissions:
   contents: read
   pages: write
@@ -25,6 +28,10 @@ jobs:
           mkdir -p _site
           cp -r docs/. _site/
           cp -r mobile _site/app
+          # Mirror the latest APK on the website (GitHub Pages CDN is usually much faster than release downloads).
+          gh release download android-latest -R "${{ github.repository }}" -p DocMind.apk -D _site || echo "no APK yet"
+          ls -la _site/DocMind.apk || true
+        env: { GH_TOKEN: "${{ github.token }}" }
       - uses: actions/upload-pages-artifact@v3
         with:
           path: _site

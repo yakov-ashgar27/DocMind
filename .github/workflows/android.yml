@@ -44,6 +44,9 @@ jobs:
             done
             [ -n "$ok" ] || { echo "could not download $l"; exit 1; }
           done
+          # tesseract.js 5 with LSTM (oem 1) only ever loads these two cores (SIMD and non-SIMD phones).
+          # The other six variants are ~22 MB of dead weight in the APK, so they are not shipped.
+          find "$T/core" -type f ! -name 'tesseract-core-simd-lstm.wasm.js' ! -name 'tesseract-core-lstm.wasm.js' -delete
           ls -la "$T" "$T/core" "$T/lang"
       - name: Drop partial OCR bundle (app then downloads OCR once instead)
         if: steps.ocr.outcome != 'success'
