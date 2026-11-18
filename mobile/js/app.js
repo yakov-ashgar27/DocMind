@@ -107,8 +107,18 @@ function restoreButton() {
   return h("div", {}, h("button", { class: "linkish", onclick: () => input.click() }, t("restore_backup")), input);
 }
 
+// Locking: the screen locks at once. If a background phone scan is running, its key stays in memory only until
+// the scan finishes (so indexing can continue with the screen off), then it is wiped like any lock.
+async function finishLock() {
+  const pi = await import("./core/phoneindex.js");
+  if (pi.state.running) {
+    const off = pi.onProgress((s) => { if (!s.running) { off(); if (!store.user) finishLock(); } });
+    return;
+  }
+  V.lockApp(); repo.wipeCache(); pi.forget();
+}
 function lockScreen() {
-  V.lockApp(); repo.wipeCache(); clearThumbs(); store.user = null;
+  finishLock(); clearThumbs(); store.user = null;
   const pass = h("input", { type: "password", placeholder: t("enter_passcode"), autocomplete: "current-password", required: true, class: "pass-input" });
   const err = h("p", { class: "form-error", role: "alert" });
   const btn = h("button", { class: "btn primary block", type: "submit" }, icon("unlock", 18), t("unlock_app"));
@@ -205,14 +215,14 @@ let hiddenAt = 0, idleTimer = null;
 function armAutoLock() {
   const reset = () => {
     clearTimeout(idleTimer);
-    if (V.session.dek) idleTimer = setTimeout(lockScreen, ((store.user?.settings?.auto_lock_minutes) || 10) * 60000);
+    if (V.session.dek && store.user) idleTimer = setTimeout(lockScreen, ((store.user?.settings?.auto_lock_minutes) || 10) * 60000);
   };
   ["pointerdown", "keydown", "scroll"].forEach((ev) => addEventListener(ev, reset, { passive: true }));
   reset();
 }
 document.addEventListener("visibilitychange", () => {
   if (document.visibilityState === "hidden") { hiddenAt = Date.now(); V.lockVault(); }
-  else if (V.session.dek && hiddenAt && Date.now() - hiddenAt > 2 * 60000) lockScreen();
+  else if (V.session.dek && store.user && hiddenAt && Date.now() - hiddenAt > 2 * 60000) lockScreen();
 });
 
 let ocrToastShown = false;

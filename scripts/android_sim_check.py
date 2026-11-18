@@ -1,6 +1,7 @@
 """Simulated Android run of the phone edition: a fake window.DocMindNative (same API as NativeBridge.java)
 serves the test fixtures as if they were gallery photos / a granted WhatsApp folder, so the real scanner,
 OCR pipeline, classifier and encrypted import are exercised in Chromium. Also checks share-in and save-out."""
+import time
 import base64
 import sys
 from pathlib import Path
@@ -41,7 +42,9 @@ FILES = {  # uri -> (fixture, source)
     "content://dl/6": ("אישור לימודים יעקב.docx", "downloads"),      # Word, says תשפ"ז
     "content://dl/7": ("ishur_old.doc", "downloads"),                # old Word 97 format
     "content://media/8": ("PXL_landscape.jpg", "gallery"),             # ordinary colour photo: no OCR at all
+    "content://dl/9": ("Scan_20261109.pdf", "downloads"),              # appears later (served slowly) — background scan test
 }
+LATE = {"content://dl/9"}
 MIME = {"jpg": "image/jpeg", "pdf": "application/pdf", "doc": "application/msword",
         "docx": "application/vnd.openxmlformats-officedocument.wordprocessingml.document"}
 
@@ -57,6 +60,8 @@ class H(http.server.SimpleHTTPRequestHandler):
         if self.path.startswith("/native/file/"):
             enc = self.path.split("/native/file/")[1]
             uri = base64.urlsafe_b64decode(enc + "=" * (-len(enc) % 4)).decode()
+            if uri in LATE:
+                time.sleep(4)
             data = (FIX / FILES[uri][0]).read_bytes()
             self.send_response(200)
             self.end_headers()
@@ -79,7 +84,9 @@ srv = socketserver.ThreadingTCPServer(("127.0.0.1", 8767), H)
 threading.Thread(target=srv.serve_forever, daemon=True).start()
 BASE = "http://127.0.0.1:8767/"
 items = [{"uri": u, "name": f, "size": (FIX / f).stat().st_size, "mime": MIME[f.rsplit(".", 1)[1]],
-          "modified": 1790000000000, "source": s} for u, (f, s) in FILES.items()]
+          "modified": 1790000000000, "source": s} for u, (f, s) in FILES.items() if u not in LATE]
+late_items = [{"uri": u, "name": "bank_later.pdf", "size": (FIX / FILES[u][0]).stat().st_size, "mime": "application/pdf",
+               "modified": 1790000500000, "source": FILES[u][1]} for u in LATE]
 FAKE_NATIVE = """
 window.__saved = []; window.__shared = [];
 window.DocMindNative = {
@@ -88,7 +95,10 @@ window.DocMindNative = {
   requestMedia: () => { window.__media = true; setTimeout(() => window.__docmindNative('permission', { media: true }), 10); },
   addFolder: (kind) => { (window.__folders ||= []).push({ uri: 'content://tree/' + kind, kind, label: kind }); setTimeout(() => window.__docmindNative('folder', { ok: true }), 10); },
   removeFolder: () => {},
-  scan: () => setTimeout(() => window.__docmindNative('scan', { items: ITEMS }), 10),
+  scan: () => setTimeout(() => window.__docmindNative('scan', { items: ITEMS.concat(window.__late || []) }), 10),
+  bgStart: () => (window.__bg ||= []).push('start'),
+  bgUpdate: (st, d, t, n) => (window.__bg ||= []).push('update'),
+  bgStop: () => (window.__bg ||= []).push('stop'),
   takeShared: () => JSON.stringify(window.__inbox ? window.__inbox.splice(0) : []),
   saveFile: (name, mime, b64) => { window.__saved.push(name); return 'saved'; },
   shareFiles: (json) => { window.__shared.push(JSON.parse(json).map(f => f.name)); return 'ok'; },
@@ -119,7 +129,9 @@ with sync_playwright() as p:
     page.wait_for_function("document.querySelector('.scan-card').innerText.includes('זוהו כמסמכים')", timeout=240000)
     card = page.inner_text(".scan-card")
     res["whole-phone scan: 8 files, 6 documents, landscape photo skipped without OCR"] = "8 קבצים" in card and "6 זוהו" in card
-    rec = page.evaluate("(async()=>{const r=await import('/js/core/repo.js');return r.getRecord('pi:f:content://media/8')})()")
+    rec = page.evaluate("(async()=>{const r=await import('/js/core/repo.js');for(const v of await r.records('pi:s:')) if(v['content://media/8']) return v['content://media/8'];return null})()")
+    nb = page.evaluate("(async()=>{const r=await import('/js/core/repo.js');return [(await r.records('pi:s:')).length,(await r.records('pi:f:')).length]})()")
+    res["index stored as encrypted bundles (no per-file records)"] = 0 < nb[0] <= 64 and nb[1] == 0
     res["colour photo filtered by pixel test (no OCR)"] = bool(rec and rec.get("photo") and not rec.get("text"))
     page.screenshot(path="/tmp/asim_index.png", full_page=True)
     page.goto(BASE + "#/library")
@@ -199,6 +211,39 @@ with sync_playwright() as p:
     page.evaluate("window.__inbox = [{uri:'content://dl/5', name:'from-gmail.pdf', size:1, mime:'application/pdf'}]; window.__docmindNative('shared', {})")
     page.wait_for_timeout(3000)
     res["Share → DocMind import"] = page.locator(".doc-card").count() >= 5 and "נוספו" in page.inner_text("#toast")
+    # background scan: a new file appears, scan starts, the user locks the app (screen off) -> the scan
+    # keeps going with the background service, finishes, and only then is the key wiped.
+    page.evaluate("window.__late = " + json.dumps(late_items) + "; window.__bg = []")
+    page.goto(BASE + "#/accounts")
+    page.wait_for_selector(".scan-card")
+    page.click(".scan-card .btn.primary")
+    page.wait_for_function("(window.__bg||[]).includes('start')", timeout=10000)
+    page.goto(BASE + "#/more")
+    page.wait_for_selector(".lock-btn")
+    page.click(".lock-btn")
+    page.wait_for_selector(".pass-input")
+    still = page.evaluate("(async()=>{const V=await import('/js/core/vault.js');const pi=await import('/js/core/phoneindex.js');return [pi.state.running, !!V.session.dek]})()")
+    page.wait_for_function("(window.__bg||[]).includes('stop')", timeout=60000)
+    page.wait_for_timeout(500)
+    wiped = page.evaluate("(async()=>{const V=await import('/js/core/vault.js');return !V.session.dek})()")
+    res["locked mid-scan: scan keeps running, key wiped when it ends"] = still == [True, True] and wiped and "update" in page.evaluate("window.__bg")
+    page.fill(".pass-input", "secret-pass-1")
+    page.click(".auth-card button[type=submit]")
+    page.wait_for_selector(".bottom-nav, nav", timeout=15000)
+    st = page.evaluate("(async()=>{const pi=await import('/js/core/phoneindex.js');return pi.stats()})()")
+    res["new file indexed while locked (9 files)"] = st["files"] == 9
+    # the index is kept: reopening the app does not rescan (it lasts until deleted; only new files are read)
+    page.reload()
+    page.wait_for_selector(".pass-input")
+    page.evaluate("window.__bg = []")
+    page.fill(".pass-input", "secret-pass-1")
+    page.click(".auth-card button[type=submit]")
+    page.wait_for_selector(".bottom-nav, nav", timeout=15000)
+    t0 = time.time()
+    st2 = page.evaluate("(async()=>{const pi=await import('/js/core/phoneindex.js');await pi.search('אישור לימודים');return pi.stats()})()")
+    ms = (time.time() - t0) * 1000
+    page.wait_for_timeout(4000)
+    res[f"after reopening: index kept (9 files), no rescan, first search {ms:.0f} ms"] = st2["files"] == 9 and page.evaluate("window.__bg") == [] and ms < 1500
     b.close()
 srv.shutdown()
 for k, v in res.items():

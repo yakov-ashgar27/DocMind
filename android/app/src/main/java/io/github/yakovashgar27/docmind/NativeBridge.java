@@ -221,6 +221,29 @@ public class NativeBridge {
         prefs.edit().putString("folders", next.toString()).apply();
     }
 
+    // ---- background scanning (foreground service + wake lock) -----------------------------------
+    @JavascriptInterface
+    public void bgStart() {
+        act.runOnUiThread(() -> {
+            act.askNotificationPermission();
+            ScanService.start(act.getApplicationContext());
+            act.keepAliveInBackground(true);
+        });
+    }
+
+    @JavascriptInterface
+    public void bgUpdate(int stage, int done, int total, int docs) {
+        ScanService.update(act.getApplicationContext(), stage, done, total, docs);
+    }
+
+    @JavascriptInterface
+    public void bgStop() {
+        act.runOnUiThread(() -> {
+            ScanService.stop(act.getApplicationContext());
+            act.keepAliveInBackground(false);
+        });
+    }
+
     // ---- scanning -----------------------------------------------------------------------------
     /** Lists candidate documents (metadata only). Result arrives as event "scan". */
     @JavascriptInterface

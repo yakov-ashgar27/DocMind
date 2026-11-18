@@ -34,6 +34,7 @@ public class MainActivity extends Activity {
     static final int REQ_FILE_CHOOSER = 1;
     static final int REQ_TREE = 2;
     static final int REQ_MEDIA_PERMISSION = 3;
+    static final int REQ_NOTIF = 4;
 
     WebView web;
     NativeBridge bridge;
@@ -205,6 +206,28 @@ public class MainActivity extends Activity {
         super.onResume();
         // Returning from Settings after granting "All files access".
         if (bridge != null) bridge.emit("permission", "{\"media\":" + hasMediaPermission() + ",\"allFiles\":" + NativeBridge.hasAllFiles() + "}");
+    }
+
+    /** While scanning: keep the WebView's JavaScript running at full priority even when not visible. */
+    void keepAliveInBackground(boolean on) {
+        if (Build.VERSION.SDK_INT >= 26) {
+            web.setRendererPriorityPolicy(on ? WebView.RENDERER_PRIORITY_IMPORTANT : WebView.RENDERER_PRIORITY_BOUND, !on);
+        }
+    }
+
+    /** Android 13+: ask once to show the scan-progress notification (the scan works either way). */
+    void askNotificationPermission() {
+        if (Build.VERSION.SDK_INT >= 33 && checkSelfPermission("android.permission.POST_NOTIFICATIONS") != PackageManager.PERMISSION_GRANTED
+                && !getSharedPreferences("docmind", MODE_PRIVATE).getBoolean("asked_notif", false)) {
+            getSharedPreferences("docmind", MODE_PRIVATE).edit().putBoolean("asked_notif", true).apply();
+            requestPermissions(new String[]{"android.permission.POST_NOTIFICATIONS"}, REQ_NOTIF);
+        }
+    }
+
+    @Override
+    protected void onDestroy() {
+        ScanService.stop(getApplicationContext());
+        super.onDestroy();
     }
 
     @Override

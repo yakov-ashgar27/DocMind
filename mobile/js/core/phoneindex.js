@@ -9,26 +9,61 @@ import * as repo from "./repo.js";
 import { Index } from "./search.js";
 import * as cr from "./crypto.js";
 
-const META = "pi:meta";          // { at, files: [{uri,name,mime,size,modified,source}] }
-const key = (uri) => "pi:f:" + uri;
+const META = "pi:meta";          // { v: 2, at }
+const SHARDS = 64;               // the index lives in 64 encrypted bundles: opening the app decrypts 64 records, not thousands
+const shardKey = (i) => "pi:s:" + i;
+const shardOf = (uri) => { let x = 0; for (let i = 0; i < uri.length; i++) x = (x * 31 + uri.charCodeAt(i)) >>> 0; return x % SHARDS; };
 export const state = { running: false, stop: false, total: 0, done: 0, docs: 0, current: "" };
 const listeners = new Set();
 export const onProgress = (fn) => { listeners.add(fn); return () => listeners.delete(fn); };
-const tick = () => listeners.forEach((f) => f({ ...state }));
+let lastBg = 0;
+const tick = () => {
+  listeners.forEach((f) => f({ ...state }));
+  // Mirror progress in the Android notification of the background-scan service (throttled).
+  if (state.running && Date.now() - lastBg > 1500) { lastBg = Date.now(); native.bgUpdate(state.stage, state.done, state.total, state.docs); }
+};
 let idx = null;
+let all = null;                  // Map uri -> { uri,name,mime,size,modified,source, text, doc_type, ... }
+const dirty = new Set();
 
-export async function meta() { return (await repo.getRecord(META)) || { at: null, files: [] }; }
+export async function meta() { return (await repo.getRecord(META)) || { at: null }; }
 export async function lastBuilt() { return (await meta()).at; }
 
-async function entries() {
-  const m = await meta();
-  const out = [];
-  for (const f of m.files) {
-    const e = await repo.getRecord(key(f.uri));
-    out.push({ ...f, ...(e || {}), indexed: !!e });
+async function load() {
+  if (all) return all;
+  const m = new Map();
+  for (let i = 0; i < SHARDS; i++) {
+    const sh = await repo.getRecord(shardKey(i));
+    if (sh) for (const [u, r] of Object.entries(sh)) m.set(u, r);
   }
-  return out;
+  // One-time migration from the first index format (one record per file).
+  const old = await repo.getRecord(META);
+  if (old && Array.isArray(old.files)) {
+    for (const f of old.files) {
+      const r = await repo.getRecord("pi:f:" + f.uri);
+      m.set(f.uri, { ...f, ...(r || {}) });
+      if (r) await repo.delRecord("pi:f:" + f.uri);
+      dirty.add(shardOf(f.uri));
+    }
+    all = m;
+    await flush();
+    await repo.putRecord(META, { v: 2, at: old.at });
+  }
+  all = m;
+  return all;
 }
+
+function put(rec) { all.set(rec.uri, rec); dirty.add(shardOf(rec.uri)); idx = null; }
+function drop(uri) { all.delete(uri); dirty.add(shardOf(uri)); idx = null; }
+async function flush() {
+  if (!dirty.size || !all) return;
+  const want = new Set(dirty), buckets = new Map([...want].map((i) => [i, {}]));
+  for (const [u, r] of all) { const i = shardOf(u); if (want.has(i)) buckets.get(i)[u] = r; }
+  for (const [i, obj] of buckets) { await repo.putRecord(shardKey(i), obj); dirty.delete(i); }
+}
+async function entries() { return [...(await load()).values()].map((e) => ({ ...e, indexed: e.stage != null })); }
+/** Called on app lock: forget the decrypted index from memory (it stays encrypted on the phone). */
+export function forget() { if (!state.running) { all = null; idx = null; } }
 
 /**
  * Two stages, so search works within a minute even with thousands of files:
@@ -42,41 +77,42 @@ export async function build({ photoMonths = 0 } = {}) {       // 0 = every photo
   Object.assign(state, { running: true, stop: false, total: 0, done: 0, docs: 0, current: "", stage: 1, skipped: 0 });
   tick();
   try {
+    native.bgStart();
     const res = await native.scan(photoMonths ? Date.now() - photoMonths * 30 * 86400000 : 0, 60000);
     const files = (res.items || []).filter((f) => !/\/stickers?\//i.test(f.uri) && !/\.webp$/i.test(f.name));
-    await repo.putRecord(META, { at: (await meta()).at, files });
-    idx = null;
-    const recs = new Map();
-    for (const f of files) recs.set(f.uri, await repo.getRecord(key(f.uri)));
-    const fresh = (f) => { const e = recs.get(f.uri); return e && e.modified === f.modified; };
-    state.docs = [...recs.values()].filter((e) => e && e.doc_type && e.doc_type !== "unknown").length;
+    await load();
+    const seen = new Set(files.map((f) => f.uri));
+    for (const u of [...all.keys()]) if (!seen.has(u)) drop(u);            // deleted from the phone
+    const fresh = (f) => { const e = all.get(f.uri); return e && e.stage != null && e.modified === f.modified; };
+    state.docs = [...all.values()].filter((e) => e.doc_type && e.doc_type !== "unknown").length;
+    let lastFlush = Date.now();
+    const maybeFlush = async (force = false) => { if (force || Date.now() - lastFlush > 30000) { await flush(); lastFlush = Date.now(); } };
 
-    // ---- stage 1: documents' own text (PDF text layer, Word) + names of everything
+    // ---- stage 1: every file listed (names searchable) + PDF text layers and Word, no OCR
     const s1 = files.filter((f) => !fresh(f)).sort((a, b) => isImg(a) - isImg(b) || b.modified - a.modified);
     Object.assign(state, { stage: 1, total: s1.length, done: 0 });
     tick();
     for (const f of s1) {
       if (state.stop) break;
-      let rec = { uri: f.uri, modified: f.modified, text: "", doc_type: "unknown", confidence: 0, stage: 1 };
-      if (isImg(f)) rec.needsOcr = f.size >= 40000;          // decide in stage 2; tiny images are icons/stickers
+      let rec = { ...f, text: "", doc_type: "unknown", confidence: 0, stage: 1 };
+      if (isImg(f)) rec.needsOcr = f.size >= 40000;          // decided in stage 2; tiny images are icons/stickers
       else rec = await read(f, rec, { ocr: false });
-      await repo.putRecord(key(f.uri), rec);
-      recs.set(f.uri, rec);
-      idx = null;
+      put(rec);
       state.done++;
-      if (state.done % 10 === 0 || !isImg(f)) tick();
+      if (state.done % 10 === 0 || !isImg(f)) { tick(); await maybeFlush(); }
     }
-    if (!state.stop) await repo.putRecord(META, { ...(await meta()), at: new Date().toISOString() });
+    await maybeFlush(true);
+    if (!state.stop) await repo.putRecord(META, { v: 2, at: new Date().toISOString() });
 
-    // ---- stage 2: OCR, newest first, documents folders before the camera roll
-    const s2 = files.filter((f) => recs.get(f.uri)?.needsOcr)
+    // ---- stage 2: OCR, newest first, document folders before the camera roll
+    const s2 = files.filter((f) => all.get(f.uri)?.needsOcr)
       .sort((a, b) => (a.source === "gallery") - (b.source === "gallery") || b.modified - a.modified);
     Object.assign(state, { stage: 2, total: s2.length, done: 0 });
     tick();
     for (const f of s2) {
       if (state.stop) break;
       state.current = f.name;
-      let rec = { ...recs.get(f.uri), needsOcr: false, stage: 2 };
+      let rec = { ...all.get(f.uri), needsOcr: false, stage: 2 };
       try {
         if (isImg(f)) {
           const bytes = await native.readUri(f.uri);
@@ -85,15 +121,18 @@ export async function build({ photoMonths = 0 } = {}) {       // 0 = every photo
           else rec = await read(f, rec, { ocr: true, quick: true }, bytes);
         } else rec = await read(f, rec, { ocr: true, quick: true });
       } catch (e) { rec.error = String(e.message || e).slice(0, 60); }
-      await repo.putRecord(key(f.uri), rec);
-      idx = null;
+      put(rec);
       state.done++;
       tick();
+      await maybeFlush();
     }
-    await repo.putRecord(META, { ...(await meta()), at: new Date().toISOString() });
+    await maybeFlush(true);
+    await repo.putRecord(META, { v: 2, at: new Date().toISOString() });
   } finally {
+    try { await flush(); } catch { /* locked meanwhile */ }
     state.running = false;
     state.current = "";
+    native.bgStop();
     tick();
   }
   return state;
@@ -169,7 +208,7 @@ function snippet(text, query) {
 export async function importFiles(uris) {
   const out = [];
   for (const uri of uris) {
-    const e = (await entries()).find((x) => x.uri === uri);
+    const e = (await load()).get(uri);
     if (!e) continue;
     const bytes = await native.readUri(uri);
     const pre = e.text ? { text: e.text, ocr: false, language: ex.detectLanguage(e.text) } : null;
@@ -181,9 +220,9 @@ export async function importFiles(uris) {
 }
 
 export async function stats() {
-  const all = await entries();
-  return { files: all.length, indexed: all.filter((e) => e.indexed).length,
-    documents: all.filter((e) => e.doc_type && e.doc_type !== "unknown").length };
+  const list = await entries();
+  return { files: list.length, indexed: list.filter((e) => e.indexed).length,
+    documents: list.filter((e) => e.doc_type && e.doc_type !== "unknown").length };
 }
 // Recognised documents that are not in the library yet; one file per distinct content (no duplicate imports).
 export async function recognisedUris() {

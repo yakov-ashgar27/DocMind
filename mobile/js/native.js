@@ -18,6 +18,12 @@ export async function requestMedia() { const p = once("permission"); N.requestMe
 export async function addFolder(kind) { const p = once("folder"); N.addFolder(kind); return (await p).ok; }
 export function removeFolder(uri) { N.removeFolder(uri); }
 export async function scan(sinceMs, maxImages) { const p = once("scan"); N.scan(sinceMs, maxImages); return p; }
+// Background scanning (Android foreground service + wake lock): keeps indexing with the screen off.
+// No-ops in the browser and on older APKs that lack the methods.
+const has = (m) => isNative && typeof N[m] === "function";
+export function bgStart() { if (has("bgStart")) N.bgStart(); }
+export function bgUpdate(stage, done, total, docs) { if (has("bgUpdate")) N.bgUpdate(stage | 0, done | 0, total | 0, docs | 0); }
+export function bgStop() { if (has("bgStop")) N.bgStop(); }
 export function takeShared() { try { return JSON.parse(N.takeShared()); } catch { return []; } }
 
 const b64url = (s) => btoa(unescape(encodeURIComponent(s))).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
