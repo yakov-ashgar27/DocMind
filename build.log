@@ -1,0 +1,265 @@
+ANDROID_HOME=/usr/local/lib/android/sdk
+/usr/local/lib/android/sdk/build-tools:
+34.0.0
+35.0.0
+35.0.1
+36.0.0
+36.1.0
+37.0.0
+
+/usr/local/lib/android/sdk/platforms:
+android-34
+android-34-ext10
+android-34-ext11
+android-34-ext12
+android-34-ext8
+android-35
+android-35-ext14
+android-35-ext15
+android-36
+android-36-ext18
+android-36-ext19
+android-36.1
+android-37.0
+android-37.1
+android-37.2
+android-37.2-beta1
+android-37.2-beta2
+android-37.2-beta3
+== OCR bundle
++ T=/home/runner/work/DocMind/DocMind/mobile/vendor/tesseract
++ mkdir -p /home/runner/work/DocMind/DocMind/mobile/vendor/tesseract/core /home/runner/work/DocMind/DocMind/mobile/vendor/tesseract/lang /tmp/ocr
++ cd /tmp/ocr
++ npm pack tesseract.js@5.1.1 tesseract.js-core@5.1.1
+npm notice
+npm notice 📦  tesseract.js@5.1.1
+npm notice Tarball Contents
+npm notice 11.4kB LICENSE.md
+npm notice 10.5kB README.md
+npm notice 67.2kB dist/tesseract.esm.min.js
+npm notice 195.5kB dist/tesseract.esm.min.js.map
+npm notice 66.7kB dist/tesseract.min.js
+npm notice 149B dist/tesseract.min.js.LICENSE.txt
+npm notice 131.3kB dist/tesseract.min.js.map
+npm notice 123.7kB dist/worker.min.js
+npm notice 466B dist/worker.min.js.LICENSE.txt
+npm notice 357.2kB dist/worker.min.js.map
+npm notice 14.8kB docs/api.md
+npm notice 4.7kB docs/examples.md
+npm notice 7.9kB docs/faq.md
+npm notice 743B docs/image-format.md
+npm notice 99.3kB docs/images/demo.gif
+npm notice 7.9kB docs/images/tesseract_dark.png
+npm notice 23.9kB docs/images/tesseract.png
+npm notice 242.4kB docs/images/video-demo.gif
+npm notice 2.5kB docs/local-installation.md
+npm notice 4.7kB docs/performance.md
+npm notice 163B docs/tesseract_lang_list.md
+npm notice 4.0kB docs/workers_vs_schedulers.md
+npm notice 874B examples/browser/basic-efficient.html
+npm notice 1.5kB examples/browser/basic-scheduler.html
+npm notice 1.9kB examples/browser/download-pdf.html
+npm notice 1.5kB examples/browser/image-processing.html
+npm notice 628B examples/node/download-pdf.js
+npm notice 1.2kB examples/node/image-processing.js
+npm notice 484B examples/node/recognize.js
+npm notice 1.1kB examples/node/scheduler.js
+npm notice 3.2kB package.json
+npm notice 350B scripts/rollup.esm.mjs
+npm notice 859B scripts/server.js
+npm notice 262B scripts/test-helper.js
+npm notice 524B scripts/webpack.config.common.js
+npm notice 799B scripts/webpack.config.prod.js
+npm notice 157B src/constants/defaultOptions.js
+npm notice 58B src/constants/imageType.js
+npm notice 5.5kB src/constants/languages.js
+npm notice 222B src/constants/OEM.js
+npm notice 345B src/constants/PSM.js
+npm notice 291B src/createJob.js
+npm notice 2.0kB src/createScheduler.js
+npm notice 7.8kB src/createWorker.js
+npm notice 7.2kB src/index.d.ts
+npm notice 739B src/index.js
+npm notice 507B src/Tesseract.js
+npm notice 1.5kB src/utils/circularize.js
+npm notice 480B src/utils/getEnvironment.js
+npm notice 102B src/utils/getId.js
+npm notice 190B src/utils/log.js
+npm notice 398B src/utils/resolvePaths.js
+npm notice 212B src/worker-script/browser/cache.js
+npm notice 2.3kB src/worker-script/browser/getCore.js
+npm notice 47B src/worker-script/browser/gunzip.js
+npm notice 661B src/worker-script/browser/index.js
+npm notice 289B src/worker-script/constants/defaultOutput.js
+npm notice 315B src/worker-script/constants/defaultParams.js
+npm notice 19.8kB src/worker-script/index.js
+npm notice 395B src/worker-script/node/cache.js
+npm notice 971B src/worker-script/node/getCore.js
+npm notice 45B src/worker-script/node/gunzip.js
+npm notice 672B src/worker-script/node/index.js
+npm notice 1.8kB src/worker-script/utils/arrayBufferToBase64.js
+npm notice 8.5kB src/worker-script/utils/dump.js
+npm notice 1.2kB src/worker-script/utils/setImage.js
+npm notice 303B src/worker/browser/defaultOptions.js
+npm notice 618B src/worker/browser/index.js
+npm notice 1.8kB src/worker/browser/loadImage.js
+npm notice 127B src/worker/browser/onMessage.js
+npm notice 181B src/worker/browser/send.js
+npm notice 451B src/worker/browser/spawnWorker.js
+npm notice 159B src/worker/browser/terminateWorker.js
+npm notice 267B src/worker/node/defaultOptions.js
+npm notice 630B src/worker/node/index.js
+npm notice 928B src/worker/node/loadImage.js
+npm notice 76B src/worker/node/onMessage.js
+npm notice 181B src/worker/node/send.js
+npm notice 213B src/worker/node/spawnWorker.js
+npm notice 154B src/worker/node/terminateWorker.js
+npm notice Tarball Details
+npm notice name: tesseract.js
+npm notice version: 5.1.1
+npm notice filename: tesseract.js-5.1.1.tgz
+npm notice package size: 629.9 kB
+npm notice unpacked size: 1.5 MB
+npm notice shasum: 7bfaca1c103ba0ce3ddf5e101f0692802a01f880
+npm notice integrity: sha512-lzVl/Ar3P3zhp[...]B3Qih9LuldcYQ==
+npm notice total files: 80
+npm notice
+tesseract.js-5.1.1.tgz
+npm notice 📦  tesseract.js-core@5.1.1
+npm notice 11.4kB LICENSE
+npm notice 4.1kB README.md
+npm notice 118B index.js
+npm notice 1.6kB package.json
+npm notice 124.4kB tesseract-core-lstm.js
+npm notice 2.9MB tesseract-core-lstm.wasm
+npm notice 3.9MB tesseract-core-lstm.wasm.js
+npm notice 124.4kB tesseract-core-simd-lstm.js
+npm notice 2.9MB tesseract-core-simd-lstm.wasm
+npm notice 3.9MB tesseract-core-simd-lstm.wasm.js
+npm notice 124.1kB tesseract-core-simd.js
+npm notice 3.5MB tesseract-core-simd.wasm
+npm notice 4.7MB tesseract-core-simd.wasm.js
+npm notice 124.1kB tesseract-core.js
+npm notice 3.5MB tesseract-core.wasm
+npm notice 4.7MB tesseract-core.wasm.js
+npm notice name: tesseract.js-core
+npm notice filename: tesseract.js-core-5.1.1.tgz
+npm notice package size: 11.3 MB
+npm notice unpacked size: 30.5 MB
+npm notice shasum: 2b6f3ef28dd109bf4efdbc8fff70bd11adac8b85
+npm notice integrity: sha512-KX3bYSU5iGcO1[...]WLu8MCXtvX5uQ==
+npm notice total files: 16
+tesseract.js-core-5.1.1.tgz
++ mkdir -p js core
++ tar xzf tesseract.js-5.1.1.tgz -C js
++ tar xzf tesseract.js-core-5.1.1.tgz -C core
++ cp js/package/dist/tesseract.min.js js/package/dist/worker.min.js /home/runner/work/DocMind/DocMind/mobile/vendor/tesseract/
++ cp core/package/tesseract-core-lstm.js core/package/tesseract-core-lstm.wasm.js core/package/tesseract-core-simd-lstm.js core/package/tesseract-core-simd-lstm.wasm.js core/package/tesseract-core-simd.js core/package/tesseract-core-simd.wasm.js core/package/tesseract-core.js core/package/tesseract-core.wasm.js core/package/tesseract-core-lstm.wasm core/package/tesseract-core-simd-lstm.wasm core/package/tesseract-core-simd.wasm core/package/tesseract-core.wasm /home/runner/work/DocMind/DocMind/mobile/vendor/tesseract/core/
++ for l in heb eng
++ ok=
++ for u in "https://cdn.jsdelivr.net/npm/@tesseract.js-data/$l/4.0.0_best_int/$l.traineddata.gz" "https://tessdata.projectnaptha.com/4.0.0_best/$l.traineddata.gz" "https://tessdata.projectnaptha.com/4.0.0/$l.traineddata.gz"
++ curl -fsSL -o /home/runner/work/DocMind/DocMind/mobile/vendor/tesseract/lang/heb.traineddata.gz https://cdn.jsdelivr.net/npm/@tesseract.js-data/heb/4.0.0_best_int/heb.traineddata.gz
++ ok=1
++ echo 'got heb from https://cdn.jsdelivr.net/npm/@tesseract.js-data/heb/4.0.0_best_int/heb.traineddata.gz'
+got heb from https://cdn.jsdelivr.net/npm/@tesseract.js-data/heb/4.0.0_best_int/heb.traineddata.gz
++ break
++ '[' -n 1 ']'
++ for l in heb eng
++ ok=
++ for u in "https://cdn.jsdelivr.net/npm/@tesseract.js-data/$l/4.0.0_best_int/$l.traineddata.gz" "https://tessdata.projectnaptha.com/4.0.0_best/$l.traineddata.gz" "https://tessdata.projectnaptha.com/4.0.0/$l.traineddata.gz"
++ curl -fsSL -o /home/runner/work/DocMind/DocMind/mobile/vendor/tesseract/lang/eng.traineddata.gz https://cdn.jsdelivr.net/npm/@tesseract.js-data/eng/4.0.0_best_int/eng.traineddata.gz
++ ok=1
++ echo 'got eng from https://cdn.jsdelivr.net/npm/@tesseract.js-data/eng/4.0.0_best_int/eng.traineddata.gz'
+got eng from https://cdn.jsdelivr.net/npm/@tesseract.js-data/eng/4.0.0_best_int/eng.traineddata.gz
++ break
++ '[' -n 1 ']'
++ find /home/runner/work/DocMind/DocMind/mobile/vendor/tesseract/core -type f '!' -name tesseract-core-simd-lstm.wasm.js '!' -name tesseract-core-lstm.wasm.js -delete
++ ls -la /home/runner/work/DocMind/DocMind/mobile/vendor/tesseract /home/runner/work/DocMind/DocMind/mobile/vendor/tesseract/core /home/runner/work/DocMind/DocMind/mobile/vendor/tesseract/lang
+/home/runner/work/DocMind/DocMind/mobile/vendor/tesseract:
+total 208
+drwxr-xr-x 4 runner runner   4096 Nov 18 16:26 .
+drwxr-xr-x 3 runner runner   4096 Nov 18 16:26 ..
+drwxr-xr-x 2 runner runner   4096 Nov 18 16:26 core
+drwxr-xr-x 2 runner runner   4096 Nov 18 16:26 lang
+-rw-r--r-- 1 runner runner  66695 Nov 18 16:26 tesseract.min.js
+-rw-r--r-- 1 runner runner 123724 Nov 18 16:26 worker.min.js
+
+/home/runner/work/DocMind/DocMind/mobile/vendor/tesseract/core:
+total 7704
+drwxr-xr-x 2 runner runner    4096 Nov 18 16:26 .
+drwxr-xr-x 4 runner runner    4096 Nov 18 16:26 ..
+-rw-r--r-- 1 runner runner 3938277 Nov 18 16:26 tesseract-core-lstm.wasm.js
+-rw-r--r-- 1 runner runner 3938657 Nov 18 16:26 tesseract-core-simd-lstm.wasm.js
+
+/home/runner/work/DocMind/DocMind/mobile/vendor/tesseract/lang:
+total 3460
+drwxr-xr-x 2 runner runner    4096 Nov 18 16:26 .
+drwxr-xr-x 4 runner runner    4096 Nov 18 16:26 ..
+-rw-r--r-- 1 runner runner 2952873 Nov 18 16:26 eng.traineddata.gz
+-rw-r--r-- 1 runner runner  580576 Nov 18 16:26 heb.traineddata.gz
+== Gradle build
+To honour the JVM settings for this build a single-use Daemon process will be forked. For more on this, please refer to https://docs.gradle.org/8.10.2/userguide/gradle_daemon.html#sec:disabling_the_daemon in the Gradle documentation.
+Daemon will be stopped at the end of the build 
+> Task :app:copyWeb
+> Task :app:preBuild
+> Task :app:preReleaseBuild
+> Task :app:javaPreCompileRelease
+> Task :app:generateReleaseResValues
+> Task :app:checkReleaseAarMetadata
+> Task :app:mapReleaseSourceSetPaths
+> Task :app:generateReleaseResources
+> Task :app:packageReleaseResources
+> Task :app:mergeReleaseResources
+> Task :app:createReleaseCompatibleScreenManifests
+> Task :app:extractDeepLinksRelease
+> Task :app:parseReleaseLocalResources
+> Task :app:processReleaseMainManifest
+> Task :app:processReleaseManifest
+> Task :app:extractProguardFiles
+> Task :app:mergeReleaseJniLibFolders
+> Task :app:mergeReleaseNativeLibs NO-SOURCE
+> Task :app:stripReleaseDebugSymbols NO-SOURCE
+> Task :app:extractReleaseNativeSymbolTables NO-SOURCE
+> Task :app:mergeReleaseNativeDebugMetadata NO-SOURCE
+> Task :app:processReleaseManifestForPackage
+> Task :app:checkReleaseDuplicateClasses
+> Task :app:desugarReleaseFileDependencies
+> Task :app:mergeReleaseStartupProfile
+> Task :app:mergeReleaseArtProfile
+> Task :app:mergeReleaseShaders
+> Task :app:compileReleaseShaders NO-SOURCE
+> Task :app:generateReleaseAssets UP-TO-DATE
+> Task :app:processReleaseResources
+> Task :app:mergeReleaseAssets
+
+> Task :app:compileReleaseJavaWithJavac
+Note: Some input files use or override a deprecated API.
+Note: Recompile with -Xlint:deprecation for details.
+
+> Task :app:mergeExtDexRelease
+> Task :app:generateReleaseLintVitalReportModel
+> Task :app:dexBuilderRelease
+> Task :app:mergeReleaseGlobalSynthetics
+> Task :app:extractReleaseVersionControlInfo
+> Task :app:processReleaseJavaRes NO-SOURCE
+> Task :app:compressReleaseAssets
+> Task :app:mergeReleaseJavaResource
+> Task :app:collectReleaseDependencies
+> Task :app:sdkReleaseDependencyData
+> Task :app:validateSigningRelease
+> Task :app:optimizeReleaseResources
+> Task :app:writeReleaseAppMetadata
+> Task :app:writeReleaseSigningConfigVersions
+> Task :app:mergeDexRelease
+> Task :app:compileReleaseArtProfile
+> Task :app:packageRelease
+> Task :app:createReleaseApkListingFileRedirect
+> Task :app:lintVitalAnalyzeRelease
+> Task :app:lintVitalReportRelease
+> Task :app:lintVitalRelease
+> Task :app:assembleRelease
+gradle/actions: Writing build results to /home/runner/work/_temp/.gradle-actions/build-results/build-1795019190357.json
+
+BUILD SUCCESSFUL in 26s
+44 actionable tasks: 44 executed
+-rw-r--r-- 1 runner runner 12933602 Nov 18 16:26 DocMind.apk
