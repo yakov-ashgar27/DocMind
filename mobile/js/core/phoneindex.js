@@ -37,12 +37,12 @@ async function entries() {
  *     Selfies, landscapes, memes, stickers and tiny images are skipped by a 5 ms pixel test.
  * Incremental: files already done (same modified time) are never read again.
  */
-export async function build({ photoMonths = 18 } = {}) {
+export async function build({ photoMonths = 0 } = {}) {       // 0 = every photo, any age
   if (!native.isNative || state.running) return state;
   Object.assign(state, { running: true, stop: false, total: 0, done: 0, docs: 0, current: "", stage: 1, skipped: 0 });
   tick();
   try {
-    const res = await native.scan(Date.now() - photoMonths * 30 * 86400000, 5000);
+    const res = await native.scan(photoMonths ? Date.now() - photoMonths * 30 * 86400000 : 0, 60000);
     const files = (res.items || []).filter((f) => !/\/stickers?\//i.test(f.uri) && !/\.webp$/i.test(f.name));
     await repo.putRecord(META, { at: (await meta()).at, files });
     idx = null;

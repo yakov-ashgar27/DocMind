@@ -33,8 +33,8 @@ import java.util.Set;
  * granted ever cross it; files are read by the page through /native/file/... and encrypted there.
  */
 public class NativeBridge {
-    private static final int MAX_FOLDER_FILES = 3000;
-    private static final int MAX_DEPTH = 7;
+    private static final int MAX_FOLDER_FILES = 60_000;
+    private static final int MAX_DEPTH = 14;
     private final MainActivity act;
     private final SharedPreferences prefs;
     private final Set<String> allowed = new HashSet<>();
@@ -110,13 +110,31 @@ public class NativeBridge {
         return null;
     }
 
-    /** Full scan of shared storage (needs "All files access", Android 11+ or legacy storage on 10-). */
+    /**
+     * Full scan of ALL shared storage (needs "All files access"): the whole internal storage and any memory card,
+     * every folder and any age. Only places that never hold documents are skipped (app caches, thumbnails, music,
+     * ringtones, voice notes, stickers, videos).
+     */
     private void scanFileSystem(JSONArray out, long sinceMs) throws Exception {
-        File root = Environment.getExternalStorageDirectory();
-        String[] dirs = {"Download", "Documents", "DCIM", "Pictures",
-                "Android/media/com.whatsapp/WhatsApp/Media", "Android/media/com.whatsapp.w4b/WhatsApp Business/Media", "WhatsApp/Media"};
         Set<String> seen = new HashSet<>();
-        for (String d : dirs) walkFs(new File(root, d), 0, out, sinceMs, seen);
+        Set<String> roots = new HashSet<>();
+        roots.add(Environment.getExternalStorageDirectory().getCanonicalPath());
+        File[] vols = new File("/storage").listFiles();               // memory cards / USB drives
+        if (vols != null) for (File v : vols) {
+            String n = v.getName();
+            if (n.equals("emulated") || n.equals("self") || !v.canRead()) continue;
+            roots.add(v.getCanonicalPath());
+        }
+        for (String r : roots) walkFs(new File(r), 0, out, sinceMs, seen);
+    }
+
+    private static boolean skipDir(File dir, String n) {
+        String p = dir.getAbsolutePath().toLowerCase();
+        if (p.endsWith("/android/data") || p.endsWith("/android/obb")) return true;         // other apps' private data
+        return n.contains("sticker") || n.contains("voice") || n.contains("audio") || n.contains("video") || n.contains("gif")
+                || n.equals("thumbnails") || n.equals("cache") || n.equals(".cache") || n.equals("music") || n.equals("ringtones")
+                || n.equals("notifications") || n.equals("alarms") || n.equals("podcasts") || n.equals("audiobooks")
+                || n.equals("recordings") || n.equals("movies") || n.equals("lost.dir") || n.equals("backups") || n.equals("databases");
     }
 
     private void walkFs(File dir, int depth, JSONArray out, long sinceMs, Set<String> seen) throws Exception {
@@ -127,9 +145,7 @@ public class NativeBridge {
             String name = f.getName();
             if (name.startsWith(".")) continue;
             if (f.isDirectory()) {
-                String n = name.toLowerCase();
-                if (n.contains("sticker") || n.contains("voice") || n.contains("audio") || n.contains("video") || n.contains("gif")
-                        || n.equals("thumbnails") || n.equals("cache")) continue;
+                if (skipDir(f, name.toLowerCase())) continue;
                 walkFs(f, depth + 1, out, sinceMs, seen);
                 continue;
             }
@@ -138,7 +154,7 @@ public class NativeBridge {
             long size = f.length(), modified = f.lastModified();
             boolean isImage = mime.startsWith("image/");
             if (size < 10_000 || size > 25_000_000) continue;
-            if (isImage && modified <= sinceMs) continue; // old photos are rarely needed documents; PDFs/Word of any age are kept
+            if (isImage && modified <= sinceMs) continue; // sinceMs is 0 by default: every photo, any age
             String path = f.getCanonicalPath();
             if (!seen.add(path)) continue;
             Uri u = Uri.fromFile(f);
@@ -149,7 +165,7 @@ public class NativeBridge {
             o.put("size", size);
             o.put("mime", mime);
             o.put("modified", modified);
-            o.put("source", lower.contains("whatsapp") ? "whatsapp" : lower.contains("/download") ? "downloads"
+            o.put("source", lower.contains("whatsapp") ? "whatsapp" : lower.contains("telegram") ? "telegram" : lower.contains("/download") ? "downloads"
                     : (lower.contains("/dcim") || lower.contains("/pictures")) ? "gallery" : "folder");
             out.put(o);
             allow(u);

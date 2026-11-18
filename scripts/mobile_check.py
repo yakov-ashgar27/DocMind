@@ -104,6 +104,20 @@ with sync_playwright() as p:
     ok("classified Hebrew scans + photos on device", all(x in body for x in ["תעודת זהות", "ספח תעודת זהות", "צו מילואים", "אישור לימודים", "אישור ניהול חשבון", "תלוש שכר"]))
     ok("duplicate detected", "כפילות אפשרית" in body)
     # --- assistant: learning flow
+    # autocomplete while typing: process -> usual documents; partial doc name -> completion
+    page.goto(BASE + "#/assistant?new=1")
+    page.wait_for_selector(".welcome")
+    ok("starter suggestions on empty composer", page.locator(".ac-chip").count() >= 3)
+    page.locator(".composer-input").press_sequentially("צריך מסמכים למלג", delay=20)
+    chip = page.locator(".ac-chip", has_text="מלגת מילואים").first
+    ok("typing 'למלג' suggests מלגת מילואים + usual docs", chip.count() == 1 and "בד״כ נדרש" in chip.inner_text() and "אישור לימודים" in chip.inner_text())
+    page.fill(".composer-input", "")
+    page.locator(".composer-input").press_sequentially("אישור לי", delay=20)
+    ok("typing 'אישור לי' completes to אישור לימודים", "אישור לימודים" in page.locator(".ac-chip").first.inner_text())
+    page.screenshot(path=OUT / "m02c_autocomplete.png")
+    page.locator(".ac-chip").first.click()
+    page.wait_for_selector(".req-card", timeout=30000)
+    ok("tapping a suggestion runs the search", "אישור לימודים" in page.locator(".req-card").last.inner_text())
     page.goto(BASE + "#/assistant?new=1")
     page.wait_for_selector(".welcome")
     page.fill(".composer-input", "אני צריך מסמכים למלגת מילואים")

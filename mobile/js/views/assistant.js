@@ -4,6 +4,7 @@ import { fmtDate, getLang, L, t, errText } from "../i18n.js";
 import { h, icon, clear, sheet, spinner, toast } from "../ui.js";
 import { navigate } from "../router.js";
 import { store } from "../store.js";
+import { autocomplete } from "./suggest.js";
 
 let convId = null;
 
@@ -21,7 +22,8 @@ export async function assistantView(root, params, query) {
     h("div", { class: "row" },
       h("button", { class: "btn ghost sm", onclick: showHistory }, icon("clock", 16), t("history")),
       h("button", { class: "btn ghost sm", onclick: () => { convId = null; navigate("/assistant?new=1"); } }, icon("plus", 16), t("new_chat"))));
-  root.append(header, thread, h("div", { class: "composer" }, input, sendBtn));
+  const ac = autocomplete(input, (text) => submit(text));
+  root.append(header, thread, h("div", { class: "composer-wrap" }, ac, h("div", { class: "composer" }, input, sendBtn)));
 
   async function submit(text) {
     text = (text ?? input.value).trim();
@@ -252,7 +254,7 @@ async function showHistory() {
 
 // ---- phone files (Android app) ---------------------------------------------------------------------
 const SRC = { downloads: { he: "הורדות", en: "Downloads" }, whatsapp: { he: "וואטסאפ", en: "WhatsApp" },
-  gallery: { he: "תמונות", en: "Photos" }, folder: { he: "קבצים", en: "Files" } };
+  gallery: { he: "תמונות", en: "Photos" }, folder: { he: "קבצים", en: "Files" }, telegram: { he: "טלגרם", en: "Telegram" } };
 function phoneList(files, picks, onPick) {
   const lang = getLang();
   const box = h("div", { class: "phone-list" }, h("div", { class: "meta" }, t("on_phone_pick")));
