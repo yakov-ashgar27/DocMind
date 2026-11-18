@@ -19,6 +19,10 @@ Both editions share one knowledge base (`backend/docmind/knowledge/catalog.py`, 
 
 **Phone edition security:** a passcode derives the key with PBKDF2 (600k iterations), so without it nothing can be decrypted. Every document has its own AES-256-GCM key. Protected folders wrap those keys with an RSA-3072 vault key whose private half is sealed by the vault PIN, so documents can be *added* to the vault without the PIN, but only the PIN opens them. The app auto-locks, slows down repeated wrong passcodes, and makes encrypted backup files for moving to a new phone. OCR (tesseract.js) is downloaded once from a CDN and then cached. Document bytes never leave the device.
 
+**Android app: whole-phone scan.** The first scan indexes the whole phone (all folders, any age, memory card) and can take a while; search works during it. It keeps running with the screen off (an ongoing notification shows progress), and the index is kept permanently, so later scans only read new files. Two things to know:
+1. **Don't swipe DocMind away from recent apps while it scans**, because that stops the scan. Turning the screen off or switching apps is fine. If it is stopped, it resumes where it left off next time.
+2. **Battery saving** (Samsung and others) can pause background work. Tap **"Allow background activity"** on the scan screen (Android's own dialog), or set Settings → Apps → DocMind → Battery → **Unrestricted**.
+
 > Tell it what you need. It finds what you have, remembers what you need, and helps you obtain what is missing.
 
 DocMind is a working Stage 1 product. It is a mobile-first web app (installable PWA) with full Hebrew RTL and English, on a modular Python backend. The backend provides encrypted storage, on-device OCR, automatic classification, semantic search, a bilingual assistant, consent-based personal memory, and document bundles.

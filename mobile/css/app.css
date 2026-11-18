@@ -380,3 +380,8 @@ input.compact { width: auto; max-width: 180px; min-height: 36px; }
 .req-import { padding: 0 14px 12px; }
 .req-import:empty { display: none; }
 .elsewhere { background: var(--surface-2); border-radius: 14px; padding: 12px; display: flex; flex-direction: column; gap: 8px; }
+
+.bg-tip { display: flex; gap: 8px; align-items: flex-start; margin-block-start: 10px; padding: 10px 12px; border-radius: 12px; background: var(--bg); }
+.bg-tip p { margin: 0; }
+.bg-tip.warn { background: color-mix(in srgb, #f5b400 14%, var(--surface)); }
+.bg-tip .btn { margin-block-start: 8px; }

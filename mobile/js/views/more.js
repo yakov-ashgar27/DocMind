@@ -215,8 +215,17 @@ export function scanCard(compact = false) {
   };
   const off = phoneindex.onProgress(show);
   show(phoneindex.state);
+  // Background tips: battery (Android's own dialog) + don't swipe the app away while scanning.
+  const inf0 = native.info();
+  const battery = inf0.battery === false
+    ? h("div", { class: "bg-tip warn" }, icon("alert", 15), h("div", {}, h("b", {}, t("battery_title")), h("p", { class: "meta" }, t("battery_desc")),
+        h("button", { class: "btn sm", onclick: () => native.requestBattery() }, t("battery_btn"))))
+    : null;
+  const swipeTip = h("div", { class: "bg-tip" }, icon("alert", 15), h("p", { class: "meta" }, t("swipe_tip")));
+  native.onNative("permission", (p) => { if (p.battery && battery) battery.remove(); });
   const card = h("section", { class: "card scan-card" }, h("h2", {}, icon("search", 16), " ", t("index_title")),
-    compact ? null : h("p", { class: "meta muted" }, t("index_desc")), bar, status, btn, importAll);
+    compact ? null : h("p", { class: "meta muted" }, t("index_desc")), bar, status, btn, importAll,
+    compact ? null : battery, compact ? null : swipeTip);
   new MutationObserver((_, obs) => { if (!document.body.contains(card)) { off(); obs.disconnect(); } }).observe(document.body, { childList: true, subtree: true });
   return card;
 }

@@ -71,6 +71,7 @@ public class NativeBridge {
             o.put("sdk", Build.VERSION.SDK_INT);
             o.put("media", act.hasMediaPermission());
             o.put("allFiles", hasAllFiles());
+            o.put("battery", batteryUnrestricted());
             o.put("folders", folders());
             o.put("bundledOcr", assetExists("www/vendor/tesseract/tesseract.min.js"));
             return o.toString();
@@ -219,6 +220,27 @@ public class NativeBridge {
             for (int i = 0; i < list.length(); i++) if (!list.getJSONObject(i).getString("uri").equals(uri)) next.put(list.get(i));
         } catch (Exception ignored) { }
         prefs.edit().putString("folders", next.toString()).apply();
+    }
+
+    // ---- battery: let the scan run with the screen off (Samsung etc. otherwise stop background work) ----
+    boolean batteryUnrestricted() {
+        android.os.PowerManager pm = (android.os.PowerManager) act.getSystemService(android.content.Context.POWER_SERVICE);
+        return pm != null && pm.isIgnoringBatteryOptimizations(act.getPackageName());
+    }
+
+    /** Opens Android's own "Let DocMind run in the background?" dialog (falls back to the app's battery settings). */
+    @JavascriptInterface
+    public void requestBattery() {
+        act.runOnUiThread(() -> {
+            try {
+                Intent i = new Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS, Uri.parse("package:" + act.getPackageName()));
+                act.startActivity(i);
+            } catch (Exception e) {
+                try {
+                    act.startActivity(new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.parse("package:" + act.getPackageName())));
+                } catch (Exception ignored) { }
+            }
+        });
     }
 
     // ---- background scanning (foreground service + wake lock) -----------------------------------

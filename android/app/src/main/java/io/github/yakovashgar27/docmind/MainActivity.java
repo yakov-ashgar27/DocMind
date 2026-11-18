@@ -205,7 +205,8 @@ public class MainActivity extends Activity {
     protected void onResume() {
         super.onResume();
         // Returning from Settings after granting "All files access".
-        if (bridge != null) bridge.emit("permission", "{\"media\":" + hasMediaPermission() + ",\"allFiles\":" + NativeBridge.hasAllFiles() + "}");
+        if (bridge != null) bridge.emit("permission", "{\"media\":" + hasMediaPermission() + ",\"allFiles\":" + NativeBridge.hasAllFiles()
+                + ",\"battery\":" + bridge.batteryUnrestricted() + "}");
     }
 
     /** While scanning: keep the WebView's JavaScript running at full priority even when not visible. */

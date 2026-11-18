@@ -90,12 +90,13 @@ late_items = [{"uri": u, "name": "bank_later.pdf", "size": (FIX / FILES[u][0]).s
 FAKE_NATIVE = """
 window.__saved = []; window.__shared = [];
 window.DocMindNative = {
-  info: () => JSON.stringify({ platform: 'android', sdk: 34, media: !!window.__media, allFiles: !!window.__all, folders: window.__folders || [], bundledOcr: false }),
+  info: () => JSON.stringify({ platform: 'android', sdk: 34, media: !!window.__media, allFiles: !!window.__all, battery: !!window.__battery, folders: window.__folders || [], bundledOcr: false }),
   requestAllFiles: () => { window.__all = true; setTimeout(() => window.__docmindNative('permission', { allFiles: true, media: true }), 10); },
   requestMedia: () => { window.__media = true; setTimeout(() => window.__docmindNative('permission', { media: true }), 10); },
   addFolder: (kind) => { (window.__folders ||= []).push({ uri: 'content://tree/' + kind, kind, label: kind }); setTimeout(() => window.__docmindNative('folder', { ok: true }), 10); },
   removeFolder: () => {},
   scan: () => setTimeout(() => window.__docmindNative('scan', { items: ITEMS.concat(window.__late || []) }), 10),
+  requestBattery: () => { window.__battery = true; setTimeout(() => window.__docmindNative('permission', { battery: true, allFiles: true, media: true }), 10); },
   bgStart: () => (window.__bg ||= []).push('start'),
   bgUpdate: (st, d, t, n) => (window.__bg ||= []).push('update'),
   bgStop: () => (window.__bg ||= []).push('stop'),
@@ -134,6 +135,10 @@ with sync_playwright() as p:
     res["index stored as encrypted bundles (no per-file records)"] = 0 < nb[0] <= 64 and nb[1] == 0
     res["colour photo filtered by pixel test (no OCR)"] = bool(rec and rec.get("photo") and not rec.get("text"))
     page.screenshot(path="/tmp/asim_index.png", full_page=True)
+    tips = page.inner_text(".scan-card")
+    page.click(".bg-tip.warn .btn")
+    page.wait_for_function("!document.querySelector('.bg-tip.warn')", timeout=5000)
+    res["scan screen: background tips + battery button opens Android dialog"] = "לא לסגור את DocMind" in tips and "לאפשר פעולה ברקע" in tips
     page.goto(BASE + "#/library")
     page.wait_for_timeout(1200)
     res["scan does not import by itself"] = page.locator(".doc-card").count() == 0

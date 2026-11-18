@@ -23,6 +23,7 @@ export async function scan(sinceMs, maxImages) { const p = once("scan"); N.scan(
 const has = (m) => isNative && typeof N[m] === "function";
 export function bgStart() { if (has("bgStart")) N.bgStart(); }
 export function bgUpdate(stage, done, total, docs) { if (has("bgUpdate")) N.bgUpdate(stage | 0, done | 0, total | 0, docs | 0); }
+export function requestBattery() { if (has("requestBattery")) N.requestBattery(); }
 export function bgStop() { if (has("bgStop")) N.bgStop(); }
 export function takeShared() { try { return JSON.parse(N.takeShared()); } catch { return []; } }
 
