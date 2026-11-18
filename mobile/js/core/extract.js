@@ -157,13 +157,39 @@ function docText(u8) {
   return runs.filter((r) => /[\u0590-\u05FFA-Za-z]{2}/.test(r)).join("\n").replace(/\r/g, "\n");
 }
 
-export async function extractText(u8, mime, { maxPages = 4 } = {}) {
+/**
+ * Cheap test (~5 ms) before spending 10-30 s of OCR on a photo: documents are mostly light, unsaturated
+ * paper with dark strokes; selfies, landscapes, food and memes are not. Returns {doc:boolean, score}.
+ */
+export async function looksLikeDocument(u8, mime) {
+  const img = await decodeImage(u8, mime);
+  const W = 48, H = 48;
+  const c = document.createElement("canvas");
+  c.width = W; c.height = H;
+  const ctx = c.getContext("2d", { willReadFrequently: true });
+  ctx.drawImage(img, 0, 0, W, H);
+  const d = ctx.getImageData(0, 0, W, H).data;
+  let paper = 0, ink = 0, colourful = 0;
+  for (let i = 0; i < d.length; i += 4) {
+    const r = d[i], g = d[i + 1], b = d[i + 2];
+    const mx = Math.max(r, g, b), mn = Math.min(r, g, b), lum = (r * 3 + g * 6 + b) / 10;
+    if (mx - mn > 60) colourful++;
+    else if (lum > 165) paper++;
+    else if (lum < 110) ink++;
+  }
+  const n = W * H, score = paper / n - colourful / n * 0.8;
+  if (img.close) img.close();
+  return { doc: paper / n >= 0.35 && colourful / n <= 0.35 && ink / n >= 0.01, score: Math.round(score * 100) / 100 };
+}
+
+export async function extractText(u8, mime, { maxPages = 4, ocr = true, quick = false } = {}) {
   if (mime === DOCX) { const t = clean(await docxText(u8)); return { text: t, ocr: false, language: detectLanguage(t) }; }
   if (mime === "application/msword") { const t = clean(docText(u8)); return { text: t, ocr: false, language: detectLanguage(t) }; }
   if (mime === "text/plain") { const t = new TextDecoder().decode(u8); return { text: t, ocr: false, language: detectLanguage(t) }; }
   if (mime.startsWith("image/")) {
+    if (!ocr) return { text: "", ocr: false, needsOcr: true, language: "unknown" };
     const img = await decodeImage(u8, mime);
-    const text = clean(await ocrCanvas(toCanvas(img)));
+    const text = clean(await ocrCanvas(quick ? toCanvas(img, 1600, 1200) : toCanvas(img)));
     return { text, ocr: true, language: detectLanguage(text) };
   }
   if (mime === "application/pdf") {
@@ -176,8 +202,9 @@ export async function extractText(u8, mime, { maxPages = 4 } = {}) {
     }
     let text = fixReversedHebrew(clean(parts.join("\n")));
     if (text.replace(/\s/g, "").length >= 40) return { text, ocr: false, language: detectLanguage(text), pages: pdf.numPages };
+    if (!ocr) return { text, ocr: false, needsOcr: true, language: detectLanguage(text), pages: pdf.numPages };
     const ocrParts = [];
-    for (let i = 1; i <= Math.min(pdf.numPages, maxPages); i++) ocrParts.push(await ocrCanvas(await renderPdfPage(await pdf.getPage(i), 2)));
+    for (let i = 1; i <= Math.min(pdf.numPages, quick ? 1 : maxPages); i++) ocrParts.push(await ocrCanvas(await renderPdfPage(await pdf.getPage(i), quick ? 1.6 : 2)));
     text = clean(ocrParts.join("\n")) || text;
     return { text, ocr: true, language: detectLanguage(text), pages: pdf.numPages };
   }

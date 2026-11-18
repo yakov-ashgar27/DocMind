@@ -265,6 +265,10 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--b
 .source { display: flex; align-items: flex-start; gap: 12px; padding: 12px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); }
 .source-order { display: grid; place-items: center; width: 22px; height: 22px; border-radius: 50%; background: var(--surface-2); font-size: 12px; font-weight: 700; color: var(--muted); flex: none; margin-block-start: 12px; }
 .source .doc-title { white-space: normal; }
+.source .doc-main { min-width: 0; flex: 1; }
+.source-action { margin-block-start: 8px; }
+.folder-chip { min-width: 0; margin-block-start: 6px; }
+.folder-chip .path { direction: ltr; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; flex: 1; font-size: 12px; }
 
 /* ---------- categories ---------- */
 .cat-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; margin-block-end: 16px; }

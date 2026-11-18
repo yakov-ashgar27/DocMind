@@ -1,6 +1,6 @@
 // Offline-first shell. App files: network-first (updates apply), OCR engine from the CDN: cache-first
 // (downloaded once, then works offline). Documents are never handled here: they live encrypted in IndexedDB.
-const VERSION = "docmind-phone-v4";
+const VERSION = "docmind-phone-v5";
 const INBOX = "docmind-share-inbox";
 const SHELL = ["./", "index.html", "manifest.webmanifest", "css/app.css", "icons/icon-192.png", "icons/icon-512.png", "icons/icon.svg",
   "js/app.js", "js/api.js", "js/catalog.js", "js/components.js", "js/i18n.js", "js/router.js", "js/store.js", "js/ui.js", "js/vault.js",

@@ -191,7 +191,8 @@ export function scanCard(compact = false) {
     if (s.running) {
       bar.hidden = false;
       bar.firstChild.style.width = `${s.total ? Math.round((100 * s.done) / s.total) : 3}%`;
-      status.textContent = t("building_index", { done: s.done, total: s.total || "…" }) + (s.docs ? ` · ${s.docs} ✓` : "");
+      status.textContent = t(s.stage === 2 ? "building_index_ocr" : "building_index", { done: s.done, total: s.total || "…" })
+        + (s.docs ? ` · ${t("docs_found", { n: s.docs })}` : "") + (s.stage === 2 && s.skipped ? ` · ${t("photos_skipped", { n: s.skipped })}` : "");
       btn.replaceChildren(icon("x", 18), t("scan_stop"));
     } else {
       bar.hidden = true;
@@ -222,26 +223,28 @@ export function scanCard(compact = false) {
 
 async function nativeSourcesView(root) {
   const inf = native.info();
-  const row = (ic, title, desc, ok, action) => h("li", { class: "source" },
+  const row = (ic, title, desc, ok, action, extra = null) => h("li", { class: "source" },
     h("div", { class: "thumb sm" }, icon(ic, 20)),
     h("div", { class: "doc-main" }, h("div", { class: "doc-title" }, title),
-      ok ? h("span", { class: "badge ok" }, icon("check", 12), t("granted")) : null,
-      h("p", { class: "meta muted" }, desc)),
-    action);
+      ok ? h("span", { class: "badge ok" }, icon("check", 12), ok === "all" ? t("covered_by_all") : t("granted")) : null,
+      h("p", { class: "meta muted" }, desc), extra, action ? h("div", { class: "source-action" }, action) : null));
   const folderOf = (kind) => inf.folders.filter((f) => f.kind === kind);
   const folderBtn = (kind) => h("button", { class: "btn ghost sm", onclick: async () => { await native.addFolder(kind); render(); } }, t("choose_folder"));
-  const granted = (kind) => folderOf(kind).map((f) => h("div", { class: "row tight meta" }, icon("folder", 13), f.label,
+  const granted = (kind) => folderOf(kind).map((f) => h("div", { class: "row tight meta folder-chip" }, icon("folder", 13), h("span", { class: "path" }, f.label),
     h("button", { class: "icon-btn", "aria-label": t("remove"), onclick: () => { native.removeFolder(f.uri); render(); } }, icon("x", 13))));
   root.append(h("div", { class: "page-head" }, h("h1", {}, t("accounts"))),
     scanCard(),
     h("ol", { class: "sources" },
       row("folder", t("all_files"), t("all_files_desc"), inf.allFiles,
         inf.allFiles ? null : h("button", { class: "btn primary sm", onclick: async () => { await native.requestAllFiles(); render(); } }, t("allow"))),
-      row("image", t("src_gallery"), t("src_gallery_desc"), inf.media,
-        inf.media ? null : h("button", { class: "btn primary sm", onclick: async () => { await native.requestMedia(); render(); } }, t("allow"))),
-      row("download", t("src_downloads"), t("src_downloads_desc"), folderOf("downloads").length, h("div", { class: "col tight" }, folderBtn("downloads"), granted("downloads"))),
-      row("msg", t("src_whatsapp"), t("src_whatsapp_desc"), folderOf("whatsapp").length, h("div", { class: "col tight" }, folderBtn("whatsapp"), granted("whatsapp"))),
-      row("folder", t("src_other"), "", folderOf("folder").length, h("div", { class: "col tight" }, folderBtn("folder"), granted("folder"))),
+      row("image", t("src_gallery"), t("src_gallery_desc"), inf.media || (inf.allFiles ? "all" : false),
+        inf.media || inf.allFiles ? null : h("button", { class: "btn primary sm", onclick: async () => { await native.requestMedia(); render(); } }, t("allow"))),
+      // With "all files" on, Download and WhatsApp are already covered (and Android refuses picking Download itself).
+      inf.allFiles ? row("download", t("src_downloads"), t("src_downloads_desc"), "all", null)
+        : row("download", t("src_downloads"), t("src_downloads_desc"), folderOf("downloads").length, folderBtn("downloads"), granted("downloads")),
+      inf.allFiles ? row("msg", t("src_whatsapp"), t("src_whatsapp_desc_all"), "all", null)
+        : row("msg", t("src_whatsapp"), t("src_whatsapp_desc"), folderOf("whatsapp").length, folderBtn("whatsapp"), granted("whatsapp")),
+      inf.allFiles ? null : row("folder", t("src_other"), "", folderOf("folder").length, folderBtn("folder"), granted("folder")),
       row("send", t("share_in"), t("src_share_desc"), true, null),
       row("mail", "Gmail", t("exp_server_only"), false, null)),
     null);

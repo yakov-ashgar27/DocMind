@@ -30,54 +30,90 @@ async function entries() {
   return out;
 }
 
-/** List the phone's files (fast, metadata only) then extract text file by file (documents first, photos last). */
+/**
+ * Two stages, so search works within a minute even with thousands of files:
+ *  1. every file is listed (names are searchable at once) and PDF/Word text layers are read — no OCR, fast.
+ *  2. OCR only where it pays: scanned PDFs (first page) and photos that look like paper documents.
+ *     Selfies, landscapes, memes, stickers and tiny images are skipped by a 5 ms pixel test.
+ * Incremental: files already done (same modified time) are never read again.
+ */
 export async function build({ photoMonths = 18 } = {}) {
   if (!native.isNative || state.running) return state;
-  Object.assign(state, { running: true, stop: false, total: 0, done: 0, docs: 0, current: "" });
+  Object.assign(state, { running: true, stop: false, total: 0, done: 0, docs: 0, current: "", stage: 1, skipped: 0 });
   tick();
   try {
     const res = await native.scan(Date.now() - photoMonths * 30 * 86400000, 5000);
-    const files = res.items || [];
+    const files = (res.items || []).filter((f) => !/\/stickers?\//i.test(f.uri) && !/\.webp$/i.test(f.name));
     await repo.putRecord(META, { at: (await meta()).at, files });
-    const prio = (f) => (f.mime.startsWith("image/") ? (f.source === "gallery" ? 2 : 1) : 0);
-    const todo = [];
-    for (const f of files) {
-      const e = await repo.getRecord(key(f.uri));
-      if (!e || e.modified !== f.modified) todo.push(f);
-    }
-    todo.sort((a, b) => prio(a) - prio(b) || b.modified - a.modified);
-    state.total = todo.length;
-    state.docs = (await entries()).filter((e) => e.doc_type && e.doc_type !== "unknown").length;
+    idx = null;
+    const recs = new Map();
+    for (const f of files) recs.set(f.uri, await repo.getRecord(key(f.uri)));
+    const fresh = (f) => { const e = recs.get(f.uri); return e && e.modified === f.modified; };
+    state.docs = [...recs.values()].filter((e) => e && e.doc_type && e.doc_type !== "unknown").length;
+
+    // ---- stage 1: documents' own text (PDF text layer, Word) + names of everything
+    const s1 = files.filter((f) => !fresh(f)).sort((a, b) => isImg(a) - isImg(b) || b.modified - a.modified);
+    Object.assign(state, { stage: 1, total: s1.length, done: 0 });
     tick();
-    for (const f of todo) {
+    for (const f of s1) {
+      if (state.stop) break;
+      let rec = { uri: f.uri, modified: f.modified, text: "", doc_type: "unknown", confidence: 0, stage: 1 };
+      if (isImg(f)) rec.needsOcr = f.size >= 40000;          // decide in stage 2; tiny images are icons/stickers
+      else rec = await read(f, rec, { ocr: false });
+      await repo.putRecord(key(f.uri), rec);
+      recs.set(f.uri, rec);
+      idx = null;
+      state.done++;
+      if (state.done % 10 === 0 || !isImg(f)) tick();
+    }
+    if (!state.stop) await repo.putRecord(META, { ...(await meta()), at: new Date().toISOString() });
+
+    // ---- stage 2: OCR, newest first, documents folders before the camera roll
+    const s2 = files.filter((f) => recs.get(f.uri)?.needsOcr)
+      .sort((a, b) => (a.source === "gallery") - (b.source === "gallery") || b.modified - a.modified);
+    Object.assign(state, { stage: 2, total: s2.length, done: 0 });
+    tick();
+    for (const f of s2) {
       if (state.stop) break;
       state.current = f.name;
-      tick();
-      let rec = { uri: f.uri, modified: f.modified, text: "", doc_type: "unknown", confidence: 0 };
+      let rec = { ...recs.get(f.uri), needsOcr: false, stage: 2 };
       try {
-        const bytes = await native.readUri(f.uri);
-        const mime = ex.sniff(bytes, f.name);
-        if (mime) {
-          const r = await ex.extractText(bytes, mime);
-          const c = cl.classify(r.text, f.name);
-          rec = { ...rec, text: r.text.slice(0, 5000), doc_type: c.doc_type, confidence: c.confidence, issuer: c.issuer,
-            doc_date: c.doc_date, expiry_date: c.expiry_date, category: c.category, sha: await cr.sha256hex(bytes) };
-          if (c.doc_type !== "unknown") state.docs++;
-        }
+        if (isImg(f)) {
+          const bytes = await native.readUri(f.uri);
+          const look = await ex.looksLikeDocument(bytes, ex.sniff(bytes, f.name) || f.mime);
+          if (!look.doc) { rec.photo = true; state.skipped++; }
+          else rec = await read(f, rec, { ocr: true, quick: true }, bytes);
+        } else rec = await read(f, rec, { ocr: true, quick: true });
       } catch (e) { rec.error = String(e.message || e).slice(0, 60); }
       await repo.putRecord(key(f.uri), rec);
       idx = null;
       state.done++;
       tick();
     }
-    const m = await meta();
-    await repo.putRecord(META, { ...m, at: new Date().toISOString() });
+    await repo.putRecord(META, { ...(await meta()), at: new Date().toISOString() });
   } finally {
     state.running = false;
     state.current = "";
     tick();
   }
   return state;
+}
+
+const isImg = (f) => (f.mime || "").startsWith("image/");
+
+async function read(f, rec, opts, bytes = null) {
+  try {
+    bytes = bytes || (await native.readUri(f.uri));
+    const mime = ex.sniff(bytes, f.name);
+    if (!mime) return rec;
+    const r = await ex.extractText(bytes, mime, opts);
+    const c = cl.classify(r.text, f.name);
+    const was = rec.doc_type && rec.doc_type !== "unknown";
+    rec = { ...rec, text: r.text.slice(0, 5000), needsOcr: !!r.needsOcr, doc_type: c.doc_type, confidence: c.confidence,
+      issuer: c.issuer, doc_date: c.doc_date, expiry_date: c.expiry_date, category: c.category, sha: await cr.sha256hex(bytes) };
+    if (c.doc_type !== "unknown" && !was) state.docs++;
+  } catch (e) { rec.error = String(e.message || e).slice(0, 60); }
+  return rec;
 }
 
 async function index() {

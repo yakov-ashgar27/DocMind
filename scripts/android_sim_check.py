@@ -8,7 +8,23 @@ from pathlib import Path
 sys.argv = [sys.argv[0], "/tmp/asim"]
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "scripts"))
-FIX = ROOT / "backend/tests/fixtures"
+FIX = Path("/tmp/asim_fixtures")
+import shutil  # noqa: E402
+shutil.rmtree(FIX, ignore_errors=True)
+shutil.copytree(ROOT / "backend/tests/fixtures", FIX)
+def _landscape():
+    from PIL import Image
+    import random
+    from PIL import ImageDraw
+    random.seed(4)
+    im = Image.new("RGB", (1600, 1200), (70, 130, 200))           # sky
+    d = ImageDraw.Draw(im)
+    d.rectangle([0, 700, 1600, 1200], fill=(60, 140, 60))            # grass
+    for _ in range(300):
+        x, y = random.randrange(1600), random.randrange(700, 1200)
+        d.ellipse([x, y, x + 30, y + 30], fill=(random.randrange(150, 255), random.randrange(40, 90), 40))  # flowers
+    im.save(FIX / "PXL_landscape.jpg", quality=92)
+_landscape()
 
 import http.server, socketserver, threading, json, io  # noqa: E401,E402
 import pytesseract  # noqa: E402
@@ -24,6 +40,7 @@ FILES = {  # uri -> (fixture, source)
     "content://dl/5": ("download (3).pdf", "downloads"),
     "content://dl/6": ("אישור לימודים יעקב.docx", "downloads"),      # Word, says תשפ"ז
     "content://dl/7": ("ishur_old.doc", "downloads"),                # old Word 97 format
+    "content://media/8": ("PXL_landscape.jpg", "gallery"),             # ordinary colour photo: no OCR at all
 }
 MIME = {"jpg": "image/jpeg", "pdf": "application/pdf", "doc": "application/msword",
         "docx": "application/vnd.openxmlformats-officedocument.wordprocessingml.document"}
@@ -101,7 +118,9 @@ with sync_playwright() as p:
     page.click(".scan-card .btn.primary")
     page.wait_for_function("document.querySelector('.scan-card').innerText.includes('זוהו כמסמכים')", timeout=240000)
     card = page.inner_text(".scan-card")
-    res["whole-phone scan indexed 7 files, 6 documents (grocery list skipped)"] = "7 קבצים" in card and "6 זוהו" in card
+    res["whole-phone scan: 8 files, 6 documents, landscape photo skipped without OCR"] = "8 קבצים" in card and "6 זוהו" in card
+    rec = page.evaluate("(async()=>{const r=await import('/js/core/repo.js');return r.getRecord('pi:f:content://media/8')})()")
+    res["colour photo filtered by pixel test (no OCR)"] = bool(rec and rec.get("photo") and not rec.get("text"))
     page.screenshot(path="/tmp/asim_index.png", full_page=True)
     page.goto(BASE + "#/library")
     page.wait_for_timeout(1200)
@@ -160,6 +179,7 @@ with sync_playwright() as p:
     page.goto(BASE + "#/accounts")
     page.wait_for_selector(".scan-card")
     page.wait_for_timeout(1000)
+    page.screenshot(path="/tmp/asim_sources.png", full_page=True)
     res["import-all offers only the 4 new distinct docs"] = "ייבוא כל 4" in page.inner_text(".scan-card")
     page.locator(".scan-card .btn.ghost").click()
     page.wait_for_function("document.querySelector('#toast').innerText.includes('4 מסמכים נוספו')", timeout=120000)
