@@ -4,6 +4,8 @@
 
 🌐 **Website:** https://yakov-ashgar27.github.io/DocMind/ · 🤖 **Android app (APK):** https://yakov-ashgar27.github.io/DocMind/DocMind.apk (mirror: [GitHub release](https://github.com/yakov-ashgar27/DocMind/releases/download/android-latest/DocMind.apk)) · 📱 **Web app (iPhone/any phone):** https://yakov-ashgar27.github.io/DocMind/app/
 
+📐 **System design:** [DFD (levels 0–1) and ERD](docs/DIAGRAMS.md), drawn from the code.
+
 ## Two editions
 
 | | 📱 **Phone edition** (`mobile/`, Android app in `android/`) | 💻 **DocMind Server** (`backend/` + `frontend/`) |
